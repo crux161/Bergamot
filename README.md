@@ -100,7 +100,5 @@ Bergamot/
 ├── Proteus/        # TypeScript — Electron Desktop Client
 ├── Anansi/         # Kafka broker configuration
 ├── docker-compose.yml   # Shared infrastructure
-├── Makefile             # Orchestration commands
-├── PANTHEON.md          # Service mythology & naming guide
-└── LABOR_DIVISION.md    # Architecture & build prompts
+└── Makefile             # Orchestration commands
 ```

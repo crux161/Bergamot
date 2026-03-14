@@ -1,0 +1,55 @@
+{
+  "name": "proteus",
+  "version": "0.1.0",
+  "description": "Bergamot Desktop Client — the shape-shifting face of the app",
+  "main": "dist/main/main.js",
+  "scripts": {
+    "dev": "concurrently \"webpack --config webpack.main.js --watch\" \"webpack serve --config webpack.renderer.js\"",
+    "build:main": "webpack --config webpack.main.js --mode production",
+    "build:renderer": "webpack --config webpack.renderer.js --mode production",
+    "build": "npm run build:main && npm run build:renderer",
+    "start": "electron dist/main/main.js",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "dependencies": {
+    "@douyinfe/semi-ui": "^2.71",
+    "@douyinfe/semi-icons": "^2.71",
+    "react": "^18.3",
+    "react-dom": "^18.3",
+    "phoenix": "^1.7"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3",
+    "@types/react-dom": "^18.3",
+    "typescript": "^5.5",
+    "webpack": "^5.95",
+    "webpack-cli": "^5.1",
+    "webpack-dev-server": "^5.1",
+    "html-webpack-plugin": "^5.6",
+    "ts-loader": "^9.5",
+    "css-loader": "^7.1",
+    "style-loader": "^4.0",
+    "sass": "^1.80",
+    "sass-loader": "^16.0",
+    "file-loader": "^6.2",
+    "electron": "^32.0",
+    "electron-builder": "^25.1",
+    "concurrently": "^9.0"
+  },
+  "build": {
+    "appId": "com.bergamot.proteus",
+    "productName": "Bergamot",
+    "mac": {
+      "icon": "resources/icons/macOS/IMG_6739.icns",
+      "category": "public.app-category.social-networking"
+    },
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "resources/**/*"
+    ]
+  }
+}

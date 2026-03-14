@@ -1,0 +1,189 @@
+# ╔══════════════════════════════════════════════════════════════════════╗
+# ║  Anansi — The Message Broker                                       ║
+# ║                                                                    ║
+# ║  Named for the West African trickster god of stories and webs.     ║
+# ║  Anansi spins the threads that connect every service in Bergamot:  ║
+# ║  Janus, Hermes, Thoth, Heimdall, Apollo, and Proteus.             ║
+# ║                                                                    ║
+# ║  Runs Apache Kafka in KRaft mode (no ZooKeeper required).         ║
+# ╚══════════════════════════════════════════════════════════════════════╝
+
+services:
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Kafka Broker (KRaft mode — single-node, controller + broker combined)
+  #
+  # Image: Confluent Community Platform 7.7.x
+  # Mode:  KRaft (ZooKeeper-free) — process.roles = broker,controller
+  # ─────────────────────────────────────────────────────────────────────
+  kafka:
+    image: confluentinc/cp-kafka:7.7.1
+    hostname: kafka
+    container_name: anansi-kafka
+    ports:
+      # ── Port 9092: INTERNAL listener ──
+      # Used by services running INSIDE Docker (other containers).
+      # Connection string: kafka:9092
+      - "9092:9092"
+
+      # ── Port 9093: EXTERNAL listener ──
+      # Used by services running on the HOST machine (your Rust, Python,
+      # Elixir apps during local development).
+      #
+      #   Python  (Janus):    bootstrap_servers="localhost:9093"
+      #   Elixir  (Hermes):   [{"localhost", 9093}]
+      #   Rust    (Thoth):    bootstrap.servers = "localhost:9093"
+      #   Rust    (Heimdall): bootstrap.servers = "localhost:9093"
+      #
+      - "9093:9093"
+
+      # ── Port 9094: CONTROLLER listener ──
+      # Internal KRaft controller quorum. Not used by application services.
+      # Exposed only for debugging / admin tooling.
+      - "9094:9094"
+    environment:
+      # ── KRaft Mode ──
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      CLUSTER_ID: "BergamotAnansiCluster01"
+
+      # ── Listeners ──
+      # INTERNAL:  other Docker containers connect here (kafka:9092)
+      # EXTERNAL:  host-machine services connect here (localhost:9093)
+      # CONTROLLER: KRaft consensus protocol (kafka:9094)
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:9092,EXTERNAL://0.0.0.0:9093,CONTROLLER://0.0.0.0:9094
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL://localhost:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9094
+
+      # ── Broker Settings ──
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+
+      # ── Performance Tuning (local dev) ──
+      KAFKA_NUM_PARTITIONS: 6
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+      KAFKA_LOG_RETENTION_HOURS: 168  # 7 days
+      KAFKA_LOG_SEGMENT_BYTES: 1073741824  # 1 GB
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"  # We create topics explicitly below
+
+      # ── Logging ──
+      KAFKA_LOG4J_ROOT_LOGLEVEL: WARN
+      KAFKA_LOG4J_LOGGERS: "kafka.controller=INFO,kafka.server=INFO"
+
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 | grep -q 'ApiVersion'"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Topic Initialization
+  #
+  # Creates the required Kafka topics on first startup.
+  # Runs once and exits — not a long-lived service.
+  # ─────────────────────────────────────────────────────────────────────
+  init-topics:
+    image: confluentinc/cp-kafka:7.7.1
+    container_name: anansi-init-topics
+    depends_on:
+      kafka:
+        condition: service_healthy
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        echo "╔═══════════════════════════════════════════╗"
+        echo "║  Anansi is weaving the topic web…         ║"
+        echo "╚═══════════════════════════════════════════╝"
+
+        # ── user.events ──
+        # Produced by: Janus (registration, profile updates, status changes)
+        # Consumed by: Hermes (presence), Heimdall (activity tracking)
+        # Partitions:  6 (keyed by user_id for per-user ordering)
+        kafka-topics --create --if-not-exists \
+          --bootstrap-server kafka:9092 \
+          --topic user.events \
+          --partitions 6 \
+          --replication-factor 1 \
+          --config retention.ms=604800000 \
+          --config cleanup.policy=delete
+
+        # ── chat.messages ──
+        # Produced by: Hermes (new messages, edits, deletes)
+        # Consumed by: Thoth (persistence to ScyllaDB)
+        # Partitions:  12 (keyed by channel_id — higher throughput topic)
+        # Note: This is the "chat.events" topic referenced in Hermes/Thoth.
+        #       Aliased here for clarity; update service configs accordingly.
+        kafka-topics --create --if-not-exists \
+          --bootstrap-server kafka:9092 \
+          --topic chat.messages \
+          --partitions 12 \
+          --replication-factor 1 \
+          --config retention.ms=604800000 \
+          --config cleanup.policy=delete
+
+        # ── chat.activity ──
+        # Produced by: Hermes/Proteus (message_read, typing, user_mentioned)
+        # Consumed by: Heimdall (read-state tracking, notifications)
+        # Partitions:  6 (keyed by user_id)
+        # Note: This is the "user.activity" topic referenced in Heimdall.
+        kafka-topics --create --if-not-exists \
+          --bootstrap-server kafka:9092 \
+          --topic chat.activity \
+          --partitions 6 \
+          --replication-factor 1 \
+          --config retention.ms=259200000 \
+          --config cleanup.policy=delete
+
+        # ── voice.signaling ──
+        # Produced by: Apollo (join/leave/offer/answer/ice-candidate events)
+        # Consumed by: Hermes (relay to connected clients), future analytics
+        # Partitions:  6 (keyed by room_id)
+        # Retention:   Short — signaling data is ephemeral
+        kafka-topics --create --if-not-exists \
+          --bootstrap-server kafka:9092 \
+          --topic voice.signaling \
+          --partitions 6 \
+          --replication-factor 1 \
+          --config retention.ms=3600000 \
+          --config cleanup.policy=delete
+
+        echo ""
+        echo "Topics created:"
+        kafka-topics --list --bootstrap-server kafka:9092
+        echo ""
+        echo "╔═══════════════════════════════════════════╗"
+        echo "║  Anansi's web is spun. All threads ready. ║"
+        echo "╚═══════════════════════════════════════════╝"
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Kafka UI (optional — comment out if not needed)
+  #
+  # Browse topics, messages, consumer groups at http://localhost:8080
+  # ─────────────────────────────────────────────────────────────────────
+  kafka-ui:
+    image: provectuslabs/kafka-ui:v0.7.2
+    container_name: anansi-ui
+    ports:
+      # ── Port 8080: Kafka management dashboard ──
+      # Open http://localhost:8080 in your browser to inspect topics,
+      # browse messages, and monitor consumer group lag.
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: bergamot-local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      DYNAMIC_CONFIG_ENABLED: "true"
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+volumes:
+  kafka_data:
+    driver: local

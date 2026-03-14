@@ -1,0 +1,18 @@
+services:
+  apollo:
+    build: .
+    ports:
+      - "5000:5000"
+      - "10000-10100:10000-10100/udp"
+    environment:
+      PORT: "5000"
+      MEDIASOUP_LISTEN_IP: "0.0.0.0"
+      MEDIASOUP_ANNOUNCED_IP: "${ANNOUNCED_IP:-127.0.0.1}"
+      MEDIASOUP_LOG_LEVEL: "warn"
+      RTC_MIN_PORT: "10000"
+      RTC_MAX_PORT: "10100"
+    # NET_ADMIN needed for mediasoup UDP port ranges
+    cap_add:
+      - NET_ADMIN
+    # Use host network in production for better UDP performance:
+    # network_mode: host

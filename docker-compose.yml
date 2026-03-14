@@ -1,0 +1,105 @@
+# ╔══════════════════════════════════════════════════════════════════════╗
+# ║  Bergamot — Unified Infrastructure Compose                        ║
+# ║                                                                    ║
+# ║  Starts the shared infrastructure layer for local development:     ║
+# ║  Kafka (Anansi), PostgreSQL (Janus), ScyllaDB (Thoth), Redis      ║
+# ║  (Heimdall).  Individual services have their own compose files     ║
+# ║  for standalone development.                                       ║
+# ╚══════════════════════════════════════════════════════════════════════╝
+
+services:
+  # ==========================================
+  # ANANSI: The Cosmic Infrastructure (Kafka)
+  # ==========================================
+  anansi-broker:
+    image: confluentinc/cp-kafka:7.7.1
+    hostname: anansi-broker
+    container_name: anansi-broker
+    ports:
+      - "9092:9092"   # INTERNAL — Docker containers connect here
+      - "9093:9093"   # EXTERNAL — Host machine services connect here
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      CLUSTER_ID: "BergamotAnansiCluster01"
+
+      # Listeners
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:9092,EXTERNAL://0.0.0.0:9093,CONTROLLER://0.0.0.0:9094
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://anansi-broker:9092,EXTERNAL://localhost:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@anansi-broker:9094
+
+      # Broker settings
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_NUM_PARTITIONS: 6
+      KAFKA_LOG_RETENTION_HOURS: 168
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 | grep -q 'ApiVersion'"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  # ==========================================
+  # THE VAULTS (Databases)
+  # ==========================================
+
+  # Used by Janus (Core API & Identity)
+  janus-postgres:
+    image: postgres:16-alpine
+    container_name: janus-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: janus
+      POSTGRES_PASSWORD: janus_secret
+      POSTGRES_DB: janus
+    volumes:
+      - janus_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U janus"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Used by Thoth (Message Storage)
+  thoth-scylla:
+    image: scylladb/scylla:5.4
+    container_name: thoth-scylla
+    ports:
+      - "9042:9042"
+    command: --smp 1 --memory 1G --overprovisioned 1
+    volumes:
+      - thoth_data:/var/lib/scylla
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh -e 'describe cluster'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # Used by Heimdall (Read State Worker)
+  hiemdall-redis:
+    image: redis:7-alpine
+    container_name: hiemdall-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - hiemdall_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  kafka_data:
+  janus_data:
+  thoth_data:
+  hiemdall_data:

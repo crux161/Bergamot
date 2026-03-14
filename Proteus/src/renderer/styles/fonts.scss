@@ -1,0 +1,58 @@
+// HarmonyOS Sans — loaded from resources
+// We use the Latin/standard variant; SC/TC available for CJK support
+
+@font-face {
+  font-family: "HarmonyOS Sans";
+  src: url("../../../resources/HarmonyOS-Sans/HarmonyOS_Sans/HarmonyOS_Sans_Thin.ttf") format("truetype");
+  font-weight: 100;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "HarmonyOS Sans";
+  src: url("../../../resources/HarmonyOS-Sans/HarmonyOS_Sans/HarmonyOS_Sans_Light.ttf") format("truetype");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "HarmonyOS Sans";
+  src: url("../../../resources/HarmonyOS-Sans/HarmonyOS_Sans/HarmonyOS_Sans_Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "HarmonyOS Sans";
+  src: url("../../../resources/HarmonyOS-Sans/HarmonyOS_Sans/HarmonyOS_Sans_Medium.ttf") format("truetype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "HarmonyOS Sans";
+  src: url("../../../resources/HarmonyOS-Sans/HarmonyOS_Sans/HarmonyOS_Sans_Semibold.ttf") format("truetype");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "HarmonyOS Sans";
+  src: url("../../../resources/HarmonyOS-Sans/HarmonyOS_Sans/HarmonyOS_Sans_Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "HarmonyOS Sans";
+  src: url("../../../resources/HarmonyOS-Sans/HarmonyOS_Sans/HarmonyOS_Sans_Black.ttf") format("truetype");
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}

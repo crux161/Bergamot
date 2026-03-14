@@ -1,0 +1,313 @@
+// ── Discord-style three-column layout ──
+//
+//  ┌──────┬────────────┬─────────────────────────────┬──────────┐
+//  │      │            │  # channel-name              │          │
+//  │ svr  │  channels  │─────────────────────────────│ members  │
+//  │ list │  sidebar   │                             │ sidebar  │
+//  │      │            │       chat messages          │          │
+//  │      │            │                             │          │
+//  │      │            │─────────────────────────────│          │
+//  │      │  user      │  [message input]             │          │
+//  │      │  panel     │                             │          │
+//  └──────┴────────────┴─────────────────────────────┴──────────┘
+
+.app-layout {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  // macOS traffic light padding
+  padding-top: env(titlebar-area-height, 0px);
+}
+
+.server-list {
+  width: 72px;
+  min-width: 72px;
+  background: #2b3733; // Tetsu-iro
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 52px 0 12px; // top pad for macOS traffic lights
+  gap: 8px;
+  overflow-y: auto;
+
+  &__item {
+    width: 48px;
+    height: 48px;
+    border-radius: 24px;
+    background: #3a403b; // Sabitetsuonando
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: border-radius 0.2s, background 0.2s;
+    color: #819c8b;
+    font-weight: 600;
+    font-size: 18px;
+    user-select: none;
+
+    &:hover,
+    &--active {
+      border-radius: 16px;
+      background: #6b9362; // Wakatake-iro
+      color: #a5ba93;
+    }
+  }
+
+  &__divider {
+    width: 32px;
+    height: 2px;
+    background: #374231; // Chitosemidori
+    border-radius: 1px;
+  }
+
+  &__add {
+    color: #6b9362;
+    &:hover {
+      background: #6b9362;
+      color: #a5ba93;
+    }
+  }
+}
+
+.channel-sidebar {
+  width: 240px;
+  min-width: 240px;
+  background: #2d4436; // Mushi'ao
+  display: flex;
+  flex-direction: column;
+  padding-top: 52px;
+
+  &__header {
+    padding: 12px 16px;
+    font-weight: 600;
+    font-size: 15px;
+    color: #a5ba93;
+    border-bottom: 1px solid #374231;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 0;
+  }
+
+  &__category {
+    padding: 16px 16px 4px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #656255; // Rikyūnezumi
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px;
+    margin: 1px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: #749f8d; // Mizu'asagi
+    font-size: 14px;
+    transition: background 0.15s, color 0.15s;
+
+    &:hover {
+      background: #3d4035; // Onandocha
+      color: #a5ba93;
+    }
+
+    &--active {
+      background: #3a403b; // Sabitetsuonando
+      color: #a5ba93;
+    }
+
+    &__icon {
+      font-size: 18px;
+      opacity: 0.7;
+    }
+  }
+
+  &__user-panel {
+    padding: 12px;
+    background: #224634; // Birōdo
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-top: 1px solid #374231;
+  }
+}
+
+.chat-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #354e4b; // Omeshicha
+  min-width: 0;
+
+  &__header {
+    height: 52px;
+    padding: 0 16px;
+    padding-top: 4px; // macOS offset
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid #3a403b;
+    font-weight: 600;
+    color: #a5ba93;
+    -webkit-app-region: drag;
+
+    &__name {
+      font-size: 15px;
+      -webkit-app-region: no-drag;
+    }
+
+    &__topic {
+      font-size: 12px;
+      color: #749f8d;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      -webkit-app-region: no-drag;
+    }
+  }
+
+  &__messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  &__input-area {
+    padding: 0 16px 16px;
+  }
+}
+
+.member-sidebar {
+  width: 240px;
+  min-width: 240px;
+  background: #2d4436; // Mushi'ao
+  padding-top: 52px;
+  overflow-y: auto;
+
+  &__header {
+    padding: 12px 16px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #656255;
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 16px;
+    cursor: pointer;
+    border-radius: 6px;
+    margin: 1px 8px;
+    transition: background 0.15s;
+
+    &:hover {
+      background: #3d4035;
+    }
+  }
+
+  &__avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #5e644f;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 600;
+    color: #a5ba93;
+  }
+
+  &__name {
+    font-size: 14px;
+    color: #819c8b;
+  }
+
+  &__status {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid #2d4436;
+    position: relative;
+    margin-left: -18px;
+    margin-top: 20px;
+
+    &--online { background: #6b9362; }
+    &--idle { background: #8c9c76; }
+    &--dnd { background: #898a74; }
+    &--offline { background: #5a6457; }
+  }
+}
+
+// ── Message bubble ──
+.message {
+  display: flex;
+  gap: 12px;
+  padding: 4px 0;
+
+  &:hover {
+    background: rgba(61, 64, 53, 0.3); // Onandocha 30%
+    border-radius: 6px;
+    margin: 0 -8px;
+    padding: 4px 8px;
+  }
+
+  &__avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #3d5d42; // Tokusa-iro
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    color: #a5ba93;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  &__body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__header {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  &__author {
+    font-weight: 600;
+    font-size: 14px;
+    color: #a5ba93;
+  }
+
+  &__timestamp {
+    font-size: 11px;
+    color: #656255; // Rikyūnezumi
+  }
+
+  &__content {
+    font-size: 14px;
+    line-height: 1.5;
+    color: #819c8b; // Seiji-iro
+    word-wrap: break-word;
+  }
+}

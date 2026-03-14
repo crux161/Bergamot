@@ -1,0 +1,21 @@
+{
+  "name": "apollo",
+  "version": "0.1.0",
+  "description": "Media SFU for Voice/Video — the god of music and light in Bergamot",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "mediasoup": "^3.14",
+    "ws": "^8.17",
+    "express": "^4.21",
+    "uuid": "^9.0",
+    "dotenv": "^16.4"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": ">=20"
+  }
+}

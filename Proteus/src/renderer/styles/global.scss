@@ -1,0 +1,99 @@
+@import "./fonts";
+
+// ── Semi Design CSS variable overrides ──
+// Map our Bergamot palette onto Semi's token system
+:root {
+  // Typography
+  --semi-font-family: "HarmonyOS Sans", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  // Colors — override Semi's dark theme tokens
+  --semi-color-primary: #6b9362;
+  --semi-color-primary-hover: #407a52;
+  --semi-color-primary-active: #2a603b;
+  --semi-color-primary-light-default: #3d5d42;
+  --semi-color-primary-light-hover: #224634;
+  --semi-color-primary-light-active: #203838;
+
+  --semi-color-bg-0: #2e372e;
+  --semi-color-bg-1: #2d4436;
+  --semi-color-bg-2: #354e4b;
+  --semi-color-bg-3: #3a403b;
+  --semi-color-bg-4: #3d4035;
+
+  --semi-color-fill-0: #3a403b;
+  --semi-color-fill-1: #3d4035;
+  --semi-color-fill-2: #5e644f;
+
+  --semi-color-border: #3a403b;
+
+  --semi-color-text-0: #a5ba93;
+  --semi-color-text-1: #819c8b;
+  --semi-color-text-2: #749f8d;
+  --semi-color-text-3: #656255;
+
+  --semi-color-link: #6b9362;
+  --semi-color-link-hover: #407a52;
+  --semi-color-link-active: #2a603b;
+  --semi-color-link-visited: #8c9c76;
+
+  --semi-color-focus-border: #6b9362;
+}
+
+// ── Global reset ──
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  font-family: var(--semi-font-family);
+  background-color: #2e372e;
+  color: #a5ba93;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+// macOS title bar drag region
+.titlebar-drag {
+  -webkit-app-region: drag;
+  height: 48px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+// Scrollbar styling
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #2e372e;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #5e644f;
+  border-radius: 4px;
+
+  &:hover {
+    background: #817b69;
+  }
+}
+
+// Selection
+::selection {
+  background: #224634;
+  color: #a5ba93;
+}

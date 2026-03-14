@@ -1,0 +1,23 @@
+import Config
+
+if config_env() == :prod do
+  secret_key_base =
+    System.get_env("SECRET_KEY_BASE") ||
+      raise "SECRET_KEY_BASE not set"
+
+  jwt_secret =
+    System.get_env("JWT_SECRET") ||
+      raise "JWT_SECRET not set"
+
+  kafka_host = System.get_env("KAFKA_HOST", "kafka")
+  kafka_port = System.get_env("KAFKA_PORT", "9092") |> String.to_integer()
+  port = System.get_env("PORT", "4000") |> String.to_integer()
+
+  config :hermes, Hermes.Endpoint,
+    http: [ip: {0, 0, 0, 0}, port: port],
+    secret_key_base: secret_key_base
+
+  config :hermes,
+    jwt_secret: jwt_secret,
+    kafka_brokers: [{kafka_host, kafka_port}]
+end

@@ -1,0 +1,52 @@
+services:
+  scylla:
+    image: scylladb/scylla:5.4
+    command: --smp 1 --memory 512M --overprovisioned 1
+    ports:
+      - "9042:9042"
+    volumes:
+      - scylla_data:/var/lib/scylla
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh -e 'describe cluster'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  kafka:
+    image: bitnami/kafka:3.7
+    environment:
+      KAFKA_CFG_NODE_ID: 0
+      KAFKA_CFG_PROCESS_ROLES: controller,broker
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 0@kafka:9093
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
+    ports:
+      - "9092:9092"
+    volumes:
+      - kafka_data:/bitnami/kafka
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics.sh --bootstrap-server localhost:9092 --list"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  thoth:
+    build: .
+    environment:
+      SCYLLA_NODES: "scylla:9042"
+      KAFKA_BROKERS: "kafka:9092"
+      KAFKA_GROUP_ID: "thoth-writers"
+      KAFKA_TOPIC: "chat.events"
+      WORKER_ID: "0"
+      RUST_LOG: "info"
+    depends_on:
+      scylla:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+volumes:
+  scylla_data:
+  kafka_data:

@@ -1,3 +1,4 @@
+use std::time::{SystemTime, UNIX_EPOCH};
 use serde::Deserialize;
 
 /// Incoming Kafka event from the user.activity topic.

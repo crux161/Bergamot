@@ -2,7 +2,7 @@
 //!
 //! Creates the `thoth` keyspace, `messages` table, and secondary indexes on first run.
 
-use scylla::Session;
+use scylla::client::session::Session;
 use tracing::info;
 
 /// CQL statements to initialize the Thoth keyspace and tables.

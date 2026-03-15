@@ -1,7 +1,7 @@
-//! Thoth — Message Routing & Storage Service.
-//!
-//! Consumes `message_created` events from Kafka (`chat.events` topic),
-//! assigns each message a Snowflake ID, and persists it to ScyllaDB.
+/// Thoth — Message Routing & Storage Service.
+///
+/// Consumes `message_created` events from Kafka (`chat.events` topic),
+/// assigns each message a Snowflake ID, and persists it to ScyllaDB.
 
 mod consumer;
 mod db;
@@ -9,7 +9,7 @@ mod models;
 
 use std::sync::Arc;
 
-use scylla::SessionBuilder;
+use scylla::client::session_builder::SessionBuilder;
 use tracing::info;
 use tracing_subscriber::EnvFilter;
 

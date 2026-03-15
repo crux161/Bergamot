@@ -1,0 +1,73 @@
+---
+- name: Provision Z620 and Deploy the Pantheon
+  hosts: z620
+  become: yes # Run tasks as sudo
+  vars:
+    app_dir: "/opt/bergamot"
+
+  tasks:
+    - name: Install system prerequisites
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+          - rsync
+          - make
+        state: present
+        update_cache: yes
+
+    - name: Add Docker's official GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable
+        state: present
+
+    - name: Install Docker and Docker Compose (V2)
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose-plugin
+        state: present
+
+    - name: Ensure Docker service is running and enabled on boot
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Ensure application directory exists
+      file:
+        path: "{{ app_dir }}"
+        state: directory
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+
+    - name: Synchronize local Bergamot monorepo to the Z620
+      ansible.posix.synchronize:
+        src: "./"
+        dest: "{{ app_dir }}/"
+        delete: yes
+        rsync_opts:
+          - "--exclude=.git"
+          - "--exclude=node_modules"
+          - "--exclude=target"
+          - "--exclude=venv"
+          - "--exclude=_build"
+
+    - name: Build and start the Pantheon (Infrastructure + Services)
+      shell: |
+        make docker-build
+        make docker-up
+      args:
+        chdir: "{{ app_dir }}"
+      environment:
+        # Pass any global secrets here if needed
+        DEPLOY_ENV: "production"

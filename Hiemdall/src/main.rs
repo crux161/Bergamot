@@ -1,7 +1,7 @@
-//! Heimdall — Read State & Notification Worker.
-//!
-//! Consumes `user.activity` events from Kafka, updates per-user read cursors
-//! in Redis, and dispatches mention notifications.
+/// Heimdall — Read State & Notification Worker.
+///
+/// Consumes `user.activity` events from Kafka, updates per-user read cursors
+/// in Redis, and dispatches mention notifications.
 
 mod consumer;
 mod models;

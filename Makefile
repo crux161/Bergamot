@@ -101,20 +101,20 @@ docs-apollo-node:
 
 ## Build all Docker images
 docker-build:
-	docker compose -f Janus/docker-compose.yml build
-	docker compose -f Hermes/docker-compose.yml build
-	docker compose -f Thoth/docker-compose.yml build
-	docker compose -f Hiemdall/docker-compose.yml build
-	docker compose -f Apollo/docker-compose.yml build
+	docker-compose -f Janus/docker-compose.yml build
+	docker-compose -f Hermes/docker-compose.yml build
+	docker-compose -f Thoth/docker-compose.yml build
+	docker-compose -f Hiemdall/docker-compose.yml build
+	docker-compose -f Apollo/docker-compose.yml build
 
 ## Start everything (infrastructure + all services with their own DBs)
 docker-up:
-	docker compose -f Anansi/docker-compose.yml up -d
-	docker compose -f Janus/docker-compose.yml up -d
-	docker compose -f Hermes/docker-compose.yml up -d
+	docker-compose -f Anansi/docker-compose.yml up -d
+	docker-compose -f Janus/docker-compose.yml up -d
+	docker-compose -f Hermes/docker-compose.yml up -d
 
 ## Stop all Docker services
 docker-down:
-	docker compose -f Hermes/docker-compose.yml down
-	docker compose -f Janus/docker-compose.yml down
-	docker compose -f Anansi/docker-compose.yml down
+	docker-compose -f Hermes/docker-compose.yml down
+	docker-compose -f Janus/docker-compose.yml down
+	docker-compose -f Anansi/docker-compose.yml down

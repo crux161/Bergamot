@@ -46,7 +46,11 @@ services:
       timeout: 10s
       retries: 10
       start_period: 30s
-
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 12G
   # ==========================================
   # THE VAULTS (Databases)
   # ==========================================
@@ -75,7 +79,12 @@ services:
     container_name: thoth-scylla
     ports:
       - "9042:9042"
-    command: --smp 1 --memory 1G --overprovisioned 1
+    command: --smp 4 --memory 8G --overprovisioned 1
+    deploy:
+        resources:
+          limits:
+            cpus: '4.0'
+            memory: 8G
     volumes:
       - thoth_data:/var/lib/scylla
     healthcheck:

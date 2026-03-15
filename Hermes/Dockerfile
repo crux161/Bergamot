@@ -1,6 +1,6 @@
 FROM elixir:1.16-otp-26-alpine AS build
 
-RUN apk add --no-cache git build-base
+RUN apk add --no-cache git build-base cmake
 
 WORKDIR /hermes
 

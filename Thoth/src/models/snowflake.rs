@@ -1,6 +1,7 @@
-//! Snowflake ID generator for globally unique, time-sortable message identifiers.
-//!
-//! Uses a lock-free `AtomicU64` CAS loop for monotonic generation within a single worker.
+use std::time::{SystemTime, UNIX_EPOCH};
+/// Snowflake ID generator for globally unique, time-sortable message identifiers.
+///
+/// Uses a lock-free `AtomicU64` CAS loop for monotonic generation within a single worker.
 
 use std::sync::atomic::{AtomicU64, Ordering};
 

@@ -1,6 +1,6 @@
-FROM rust:1.77-bookworm AS builder
+FROM rust:1.85-slim AS builder
 
-RUN apt-get update && apt-get install -y cmake libssl-dev pkg-config && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y cmake g++ build-essential libssl-dev pkg-config libcurl4-openssl-dev libsasl2-dev libzstd-dev && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /heimdall
 

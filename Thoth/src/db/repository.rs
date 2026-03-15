@@ -1,9 +1,9 @@
-//! ScyllaDB data-access layer for persisting chat messages.
-//!
-//! Wraps a shared `Session` with prepared statements for high-throughput inserts.
+/// ScyllaDB data-access layer for persisting chat messages.
+///
+/// Wraps a shared `Session` with prepared statements for high-throughput inserts.
 
-use scylla::prepared_statement::PreparedStatement;
-use scylla::Session;
+use scylla::statement::prepared::PreparedStatement;
+use scylla::client::session::Session;
 use std::sync::Arc;
 use tracing::{error, info};
 

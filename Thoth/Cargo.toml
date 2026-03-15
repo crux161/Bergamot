@@ -6,8 +6,9 @@ description = "Message Routing & Storage Service — the scribe of Bergamot"
 
 [dependencies]
 tokio = { version = "1", features = ["full"] }
+tokio-stream = "0.1"
+scylla = "1.5.0"
 rdkafka = { version = "0.36", features = ["cmake-build"] }
-scylla = "0.13"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tracing = "0.1"

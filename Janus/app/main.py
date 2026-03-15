@@ -4,6 +4,8 @@ Configures the FastAPI application, registers routers, and manages
 the database lifecycle via the ASGI lifespan context.
 """
 
+from fastapi.middleware.cors import CORSMiddleware
+
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -28,10 +30,18 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title=settings.PROJECT_NAME,
+    title="Janus API",
     description="Core API & Identity Service — the gateway to Bergamot",
     version="0.1.0",
     lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # For dev, let everyone in. For prod, use ["http://localhost:3000"]
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.include_router(auth.router, prefix=settings.API_V1_PREFIX)

@@ -28,7 +28,18 @@ module.exports = {
       },
       {
         test: /\.scss$/,
-        use: ["style-loader", "css-loader", "sass-loader"],
+        use: [
+          "style-loader",
+          "css-loader",
+          {
+            loader: "sass-loader",
+            options: {
+              sassOptions: {
+                silenceDeprecations: ["import"],
+              },
+            },
+          },
+        ],
       },
       {
         test: /\.(woff|woff2|eot|ttf|otf)$/,
@@ -53,6 +64,12 @@ module.exports = {
     hot: true,
     static: {
       directory: path.resolve(__dirname, "dist/renderer"),
+    },
+    client: {
+      overlay: {
+        errors: true,
+        warnings: false,
+      },
     },
   },
 };

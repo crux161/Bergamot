@@ -1,14 +1,60 @@
-import React, { useState } from "react";
-import { LoginScreen } from "./components/LoginScreen";
+import React, { useState, useEffect } from "react";
 import { AppLayout } from "./layouts/AppLayout";
-import type { UserRead } from "./services/api";
+import { LoginScreen } from "./components/LoginScreen";
+import * as API from "./services/api";
 
-export const App: React.FC = () => {
-  const [currentUser, setCurrentUser] = useState<UserRead | null>(null);
+const App: React.FC = () => {
+  const [token, setToken] = useState<string | null>(API.getToken());
+  const [user, setUser] = useState<API.UserRead | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  if (!currentUser) {
-    return <LoginScreen onLoggedIn={setCurrentUser} />;
+  // If we already have a token, fetch the current user
+  useEffect(() => {
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+    API.getMe()
+      .then((u) => setUser(u))
+      .catch(() => {
+        // Token is stale / invalid — clear it
+        localStorage.removeItem("bergamot_token");
+        setToken(null);
+      })
+      .finally(() => setLoading(false));
+  }, [token]);
+
+  const handleLoggedIn = (u: API.UserRead) => {
+    setToken(API.getToken());
+    setUser(u);
+  };
+
+  if (loading) {
+    return (
+      <div
+        style={{
+          height: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "#2E372E",
+          color: "#749F8D",
+          fontSize: 16,
+        }}
+      >
+        Entering the Pantheon...
+      </div>
+    );
   }
 
-  return <AppLayout currentUser={currentUser} />;
+  // Not authenticated — show login
+  if (!token || !user) {
+    return <LoginScreen onLoggedIn={handleLoggedIn} />;
+  }
+
+  // Authenticated — AppLayout is self-contained
+  // (it manages servers, channels, messages, and mock-data fallback internally)
+  return <AppLayout currentUser={user} />;
 };
+
+export default App;

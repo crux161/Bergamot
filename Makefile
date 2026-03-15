@@ -37,9 +37,8 @@ hiemdall:
 apollo:
 	cd Apollo && node src/index.js
 
-## Start the Desktop Client (Electron/React)
 proteus:
-	cd Proteus && npm start
+	cd Proteus && npx concurrently "npm run dev" "wait-on http://localhost:3000 && npm start"
 
 # ============================================================
 # Documentation

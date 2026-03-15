@@ -25,6 +25,7 @@ defmodule Hermes.MixProject do
   defp deps do
     [
       {:phoenix, "~> 1.7"},
+      {:plug_cowboy, "~> 2.6"},
       {:phoenix_pubsub, "~> 2.1"},
       {:jason, "~> 1.4"},
       {:bandit, "~> 1.5"},

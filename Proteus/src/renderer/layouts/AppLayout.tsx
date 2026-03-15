@@ -9,6 +9,45 @@ import * as api from "../services/api";
 import * as socket from "../services/socket";
 import type { MessagePayload } from "../services/socket";
 
+// ── Mock data for offline/development use ──
+
+const MOCK_SERVERS: api.ServerRead[] = [
+  { id: "1", name: "Mount Olympus", icon_url: null, owner_id: "0", created_at: "2025-01-01T00:00:00Z" },
+  { id: "2", name: "Jade Palace", icon_url: null, owner_id: "0", created_at: "2025-01-02T00:00:00Z" },
+];
+
+const MOCK_CHANNELS: Record<string, api.ChannelRead[]> = {
+  "1": [
+    { id: "101", name: "general", topic: "Welcome to Mount Olympus", channel_type: "text", position: 0, server_id: "1", created_at: "2025-01-01T00:00:00Z" },
+    { id: "102", name: "announcements", topic: "Important updates", channel_type: "text", position: 1, server_id: "1", created_at: "2025-01-01T00:00:00Z" },
+    { id: "103", name: "off-topic", topic: null, channel_type: "text", position: 2, server_id: "1", created_at: "2025-01-01T00:00:00Z" },
+    { id: "104", name: "voice-lounge", topic: null, channel_type: "voice", position: 3, server_id: "1", created_at: "2025-01-01T00:00:00Z" },
+  ],
+  "2": [
+    { id: "201", name: "general", topic: "The Jade Palace awaits", channel_type: "text", position: 0, server_id: "2", created_at: "2025-01-02T00:00:00Z" },
+    { id: "202", name: "training", topic: "Sharpen your skills", channel_type: "text", position: 1, server_id: "2", created_at: "2025-01-02T00:00:00Z" },
+  ],
+};
+
+const MOCK_MESSAGES: MessagePayload[] = [
+  { id: "m1", content: "Has anyone seen the new gateway config?", sender_id: "u-artemis", channel_id: "101", timestamp: "2025-06-14T09:15:00Z" },
+  { id: "m2", content: "Yeah, Hermes pushed an update last night. Channels are routing properly now.", sender_id: "u-hephaestus", channel_id: "101", timestamp: "2025-06-14T09:17:00Z" },
+  { id: "m3", content: "Nice. I was getting timeout errors on the voice channels earlier.", sender_id: "u-athena", channel_id: "101", timestamp: "2025-06-14T09:20:00Z" },
+  { id: "m4", content: "That should be resolved. Let me know if it happens again.", sender_id: "u-hephaestus", channel_id: "101", timestamp: "2025-06-14T09:21:00Z" },
+  { id: "m5", content: "Quick question — are we still using Janus for auth or did that change?", sender_id: "u-apollo", channel_id: "101", timestamp: "2025-06-14T10:02:00Z" },
+  { id: "m6", content: "Still Janus. The token flow goes through /api/v1/auth/login.", sender_id: "u-artemis", channel_id: "101", timestamp: "2025-06-14T10:05:00Z" },
+  { id: "m7", content: "Perfect, thanks. Proteus frontend is almost wired up.", sender_id: "u-apollo", channel_id: "101", timestamp: "2025-06-14T10:06:00Z" },
+];
+
+const MOCK_MEMBERS = [
+  { id: "0", username: "Eain", display_name: "Eain", status: "online" as const },
+  { id: "u-artemis", username: "Artemis", display_name: "Artemis", status: "online" as const },
+  { id: "u-hephaestus", username: "Hephaestus", display_name: "Hephaestus", status: "idle" as const },
+  { id: "u-athena", username: "Athena", display_name: "Athena", status: "online" as const },
+  { id: "u-apollo", username: "Apollo", display_name: "Apollo", status: "dnd" as const },
+  { id: "u-hermes", username: "Hermes", display_name: "Hermes", status: "offline" as const },
+];
+
 interface Props {
   currentUser: api.UserRead;
 }
@@ -21,52 +60,86 @@ export const AppLayout: React.FC<Props> = ({ currentUser }) => {
   const [messages, setMessages] = useState<MessagePayload[]>([]);
   const [showAddServer, setShowAddServer] = useState(false);
   const [newServerName, setNewServerName] = useState("");
+  const [usingMockData, setUsingMockData] = useState(false);
 
-  // Connect to Hermes on mount
+  // Connect to Hermes on mount (graceful fallback)
   useEffect(() => {
-    socket.connect();
-    return () => socket.disconnect();
+    try {
+      socket.connect();
+    } catch {
+      console.warn("[Proteus] Could not connect to Hermes — using mock data");
+    }
+    return () => {
+      try { socket.disconnect(); } catch { /* noop */ }
+    };
   }, []);
 
-  // Load servers
+  // Load servers (fall back to mock data)
   useEffect(() => {
-    api.listServers().then((s) => {
+    api.listServers().then((s: api.ServerRead[]) => {
       setServers(s);
       if (s.length > 0 && !activeServerId) {
         setActiveServerId(s[0].id);
       }
+    }).catch(() => {
+      console.warn("[Proteus] API unreachable — loading mock servers");
+      setUsingMockData(true);
+      setServers(MOCK_SERVERS);
+      setActiveServerId(MOCK_SERVERS[0].id);
     });
   }, []);
 
-  // Load channels when server changes
+  // Load channels when server changes (fall back to mock data)
   useEffect(() => {
     if (!activeServerId) return;
     setChannels([]);
     setActiveChannelId(null);
     setMessages([]);
 
+    if (usingMockData) {
+      const mockChs = MOCK_CHANNELS[activeServerId] || [];
+      setChannels(mockChs);
+      const firstText = mockChs.find((c: api.ChannelRead) => c.channel_type === "text");
+      if (firstText) setActiveChannelId(firstText.id);
+      return;
+    }
+
     api.listChannels(activeServerId).then((chs) => {
       setChannels(chs);
-      const firstText = chs.find((c) => c.channel_type === "text");
+      const firstText = chs.find((c: api.ChannelRead) => c.channel_type === "text");
+      if (firstText) setActiveChannelId(firstText.id);
+    }).catch(() => {
+      const mockChs = MOCK_CHANNELS[activeServerId] || [];
+      setChannels(mockChs);
+      const firstText = mockChs.find((c: api.ChannelRead) => c.channel_type === "text");
       if (firstText) setActiveChannelId(firstText.id);
     });
-  }, [activeServerId]);
+  }, [activeServerId, usingMockData]);
 
   // Join channel when it changes
   useEffect(() => {
     if (!activeChannelId) return;
-    setMessages([]);
 
+    if (usingMockData) {
+      setMessages(MOCK_MESSAGES.filter((m) => m.channel_id === activeChannelId));
+      return;
+    }
+
+    setMessages([]);
     const handleMessage = (msg: MessagePayload) => {
       setMessages((prev) => [...prev, msg]);
     };
 
-    socket.joinChannel(activeChannelId, handleMessage);
+    try {
+      socket.joinChannel(activeChannelId, handleMessage);
+    } catch {
+      setMessages(MOCK_MESSAGES.filter((m) => m.channel_id === activeChannelId));
+    }
 
     return () => {
-      socket.leaveChannel(activeChannelId);
+      try { socket.leaveChannel(activeChannelId); } catch { /* noop */ }
     };
-  }, [activeChannelId]);
+  }, [activeChannelId, usingMockData]);
 
   const handleCreateServer = useCallback(async () => {
     if (!newServerName.trim()) return;
@@ -81,8 +154,12 @@ export const AppLayout: React.FC<Props> = ({ currentUser }) => {
     }
   }, [newServerName]);
 
-  const activeServer = servers.find((s) => s.id === activeServerId);
-  const activeChannel = channels.find((c) => c.id === activeChannelId);
+  const activeServer = servers.find((s: api.ServerRead) => s.id === activeServerId);
+  const activeChannel = channels.find((c: api.ChannelRead) => c.id === activeChannelId);
+
+  const members = usingMockData
+    ? MOCK_MEMBERS
+    : [{ id: currentUser.id, username: currentUser.username, display_name: currentUser.display_name, status: "online" as const }];
 
   return (
     <div className="app-layout">
@@ -141,16 +218,7 @@ export const AppLayout: React.FC<Props> = ({ currentUser }) => {
       </div>
 
       {activeServer && (
-        <MemberList
-          members={[
-            {
-              id: currentUser.id,
-              username: currentUser.username,
-              display_name: currentUser.display_name,
-              status: "online",
-            },
-          ]}
-        />
+        <MemberList members={members} />
       )}
 
       <Modal

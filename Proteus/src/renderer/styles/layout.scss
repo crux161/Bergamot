@@ -20,6 +20,18 @@
   padding-top: env(titlebar-area-height, 0px);
 }
 
+.app-header {
+  -webkit-app-region: drag; // This makes the area draggable
+  height: 32px;
+  display: flex;
+  align-items: center;
+  padding-left: 80px; // Leaves room for the traffic lights
+  
+  button, input, a {
+    -webkit-app-region: no-drag; // Crucial: interactive elements must be non-draggable
+  }
+}
+
 .server-list {
   width: 72px;
   min-width: 72px;

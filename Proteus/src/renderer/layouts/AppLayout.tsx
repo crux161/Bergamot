@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Modal, Input, Toast } from "@douyinfe/semi-ui";
+import { Modal, Input, Toast, Select } from "@douyinfe/semi-ui";
 import { ServerList } from "../components/ServerList";
 import { ChannelList } from "../components/ChannelList";
 import { ChatView } from "../components/ChatView";
 import { MessageInput } from "../components/MessageInput";
 import { MemberList } from "../components/MemberList";
+import { SettingsPanel } from "../components/SettingsPanel";
+import { ServerSettingsPanel } from "../components/ServerSettingsPanel";
 import * as api from "../services/api";
+import { Permissions, hasPermission } from "../services/api";
 import * as socket from "../services/socket";
 import type { MessagePayload } from "../services/socket";
 
@@ -37,6 +40,7 @@ const MOCK_MESSAGES: MessagePayload[] = [
   { id: "m5", content: "Quick question — are we still using Janus for auth or did that change?", sender_id: "u-apollo", channel_id: "101", timestamp: "2025-06-14T10:02:00Z" },
   { id: "m6", content: "Still Janus. The token flow goes through /api/v1/auth/login.", sender_id: "u-artemis", channel_id: "101", timestamp: "2025-06-14T10:05:00Z" },
   { id: "m7", content: "Perfect, thanks. Proteus frontend is almost wired up.", sender_id: "u-apollo", channel_id: "101", timestamp: "2025-06-14T10:06:00Z" },
+  { id: "m8", content: "Here's the new architecture diagram:", sender_id: "u-athena", channel_id: "101", timestamp: "2025-06-14T10:10:00Z", attachments: [{ id: "att-1", filename: "architecture.png", content_type: "image/png", url: "https://placehold.co/400x300/2b2d31/6b9362?text=Architecture+Diagram" }] },
 ];
 
 const MOCK_MEMBERS = [
@@ -48,26 +52,51 @@ const MOCK_MEMBERS = [
   { id: "u-hermes", username: "Hermes", display_name: "Hermes", status: "offline" as const },
 ];
 
+// All permissions (used for mock mode / server owner)
+const ALL_PERMS = 0xFF;
+
 interface Props {
   currentUser: api.UserRead;
+  onLogout?: () => void;
+  onUserUpdated?: (user: api.UserRead) => void;
 }
 
-export const AppLayout: React.FC<Props> = ({ currentUser }) => {
+export const AppLayout: React.FC<Props> = ({ currentUser, onLogout, onUserUpdated }) => {
   const [servers, setServers] = useState<api.ServerRead[]>([]);
   const [activeServerId, setActiveServerId] = useState<string | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showServerSettings, setShowServerSettings] = useState(false);
   const [channels, setChannels] = useState<api.ChannelRead[]>([]);
   const [activeChannelId, setActiveChannelId] = useState<string | null>(null);
   const [messages, setMessages] = useState<MessagePayload[]>([]);
   const [showAddServer, setShowAddServer] = useState(false);
   const [newServerName, setNewServerName] = useState("");
+  const [showAddChannel, setShowAddChannel] = useState(false);
+  const [newChannelName, setNewChannelName] = useState("");
+  const [newChannelType, setNewChannelType] = useState<"text" | "voice">("text");
   const [usingMockData, setUsingMockData] = useState(false);
+  const [hermesConnected, setHermesConnected] = useState(false);
+  const [myPermissions, setMyPermissions] = useState<number>(ALL_PERMS);
 
   // Connect to Hermes on mount (graceful fallback)
   useEffect(() => {
     try {
       socket.connect();
+      socket.onOpen(() => {
+        console.log("[Proteus] Connected to Hermes");
+        setHermesConnected(true);
+      });
+      socket.onError(() => {
+        console.warn("[Proteus] Hermes connection error");
+        setHermesConnected(false);
+      });
+      socket.onClose(() => {
+        console.log("[Proteus] Hermes disconnected");
+        setHermesConnected(false);
+      });
     } catch {
-      console.warn("[Proteus] Could not connect to Hermes — using mock data");
+      console.warn("[Proteus] Could not connect to Hermes");
+      setHermesConnected(false);
     }
     return () => {
       try { socket.disconnect(); } catch { /* noop */ }
@@ -89,7 +118,7 @@ export const AppLayout: React.FC<Props> = ({ currentUser }) => {
     });
   }, []);
 
-  // Load channels when server changes (fall back to mock data)
+  // Load channels + permissions when server changes
   useEffect(() => {
     if (!activeServerId) return;
     setChannels([]);
@@ -97,26 +126,32 @@ export const AppLayout: React.FC<Props> = ({ currentUser }) => {
     setMessages([]);
 
     if (usingMockData) {
+      setMyPermissions(ALL_PERMS);
       const mockChs = MOCK_CHANNELS[activeServerId] || [];
       setChannels(mockChs);
-      const firstText = mockChs.find((c: api.ChannelRead) => c.channel_type === "text");
+      const firstText = mockChs.find((c) => c.channel_type === "text");
       if (firstText) setActiveChannelId(firstText.id);
       return;
     }
 
+    // Fetch permissions for this server
+    api.getMyPermissions(activeServerId).then(setMyPermissions).catch(() => {
+      setMyPermissions(ALL_PERMS); // Fallback: give all perms (e.g. owner)
+    });
+
     api.listChannels(activeServerId).then((chs) => {
       setChannels(chs);
-      const firstText = chs.find((c: api.ChannelRead) => c.channel_type === "text");
+      const firstText = chs.find((c) => c.channel_type === "text");
       if (firstText) setActiveChannelId(firstText.id);
     }).catch(() => {
       const mockChs = MOCK_CHANNELS[activeServerId] || [];
       setChannels(mockChs);
-      const firstText = mockChs.find((c: api.ChannelRead) => c.channel_type === "text");
+      const firstText = mockChs.find((c) => c.channel_type === "text");
       if (firstText) setActiveChannelId(firstText.id);
     });
   }, [activeServerId, usingMockData]);
 
-  // Join channel when it changes
+  // Join channel when it changes — load history then subscribe to live messages
   useEffect(() => {
     if (!activeChannelId) return;
 
@@ -126,20 +161,82 @@ export const AppLayout: React.FC<Props> = ({ currentUser }) => {
     }
 
     setMessages([]);
+
+    // Load persisted message history from Janus
+    api.listMessages(activeChannelId).then((history) => {
+      const mapped: MessagePayload[] = history.map((m) => ({
+        id: String(m.id),
+        content: m.content,
+        sender_id: String(m.sender_id),
+        channel_id: String(m.channel_id),
+        timestamp: m.created_at,
+        nonce: m.nonce || undefined,
+        attachments: m.attachments || undefined,
+      }));
+      setMessages(mapped);
+    }).catch((err) => {
+      console.warn("[Proteus] Failed to load message history:", err);
+    });
+
+    // Subscribe to live messages via WebSocket
     const handleMessage = (msg: MessagePayload) => {
-      setMessages((prev) => [...prev, msg]);
+      setMessages((prev) => {
+        // Deduplicate by nonce (sender already added their own message locally)
+        if (msg.nonce && prev.some((m) => m.nonce === msg.nonce)) return prev;
+        return [...prev, msg];
+      });
     };
 
     try {
       socket.joinChannel(activeChannelId, handleMessage);
     } catch {
-      setMessages(MOCK_MESSAGES.filter((m) => m.channel_id === activeChannelId));
+      // WebSocket unavailable — history from Janus is still shown
     }
 
     return () => {
       try { socket.leaveChannel(activeChannelId); } catch { /* noop */ }
     };
   }, [activeChannelId, usingMockData]);
+
+  // ── Handlers ──
+
+  const handleMessageSent = useCallback((msg: MessagePayload) => {
+    // Hermes broadcasts exclude the sender, so we must add our own message locally
+    setMessages((prev) => [...prev, msg]);
+  }, []);
+
+  const handleDeleteMessage = useCallback(async (messageId: string) => {
+    if (usingMockData) {
+      setMessages((prev) => prev.filter((m) => m.id !== messageId));
+      return;
+    }
+    if (!activeChannelId) return;
+    try {
+      await api.deleteMessage(activeChannelId, messageId);
+      setMessages((prev) => prev.filter((m) => m.id !== messageId));
+    } catch (err: any) {
+      Toast.error({ content: err.message || "Failed to delete message", duration: 2 });
+    }
+  }, [activeChannelId, usingMockData]);
+
+  const handleDeleteChannel = useCallback(async (channelId: string) => {
+    if (!activeServerId) return;
+    try {
+      await api.deleteChannel(activeServerId, channelId);
+      setChannels((prev) => {
+        const updated = prev.filter((c) => c.id !== channelId);
+        // If the deleted channel was active, select another
+        if (activeChannelId === channelId) {
+          const firstText = updated.find((c) => c.channel_type === "text");
+          setActiveChannelId(firstText?.id || null);
+        }
+        return updated;
+      });
+      Toast.success({ content: "Channel deleted", duration: 1.5 });
+    } catch (err: any) {
+      Toast.error({ content: err.message || "Failed to delete channel", duration: 2 });
+    }
+  }, [activeServerId, activeChannelId]);
 
   const handleCreateServer = useCallback(async () => {
     if (!newServerName.trim()) return;
@@ -154,12 +251,39 @@ export const AppLayout: React.FC<Props> = ({ currentUser }) => {
     }
   }, [newServerName]);
 
-  const activeServer = servers.find((s: api.ServerRead) => s.id === activeServerId);
-  const activeChannel = channels.find((c: api.ChannelRead) => c.id === activeChannelId);
+  const handleCreateChannel = useCallback(async () => {
+    if (!newChannelName.trim() || !activeServerId) return;
+    try {
+      const ch = await api.createChannel(activeServerId, newChannelName.trim(), newChannelType);
+      setChannels((prev) => [...prev, ch]);
+      setActiveChannelId(ch.id);
+      setNewChannelName("");
+      setNewChannelType("text");
+      setShowAddChannel(false);
+    } catch (err: any) {
+      Toast.error(err.message);
+    }
+  }, [newChannelName, newChannelType, activeServerId]);
+
+  const activeServer = servers.find((s) => s.id === activeServerId);
+  const activeChannel = channels.find((c) => c.id === activeChannelId);
+
+  const canManageChannels = hasPermission(myPermissions, Permissions.MANAGE_CHANNELS);
+  const canManageMessages = hasPermission(myPermissions, Permissions.MANAGE_MESSAGES);
+  const canOpenServerSettings = hasPermission(myPermissions, Permissions.MANAGE_SERVER)
+    || hasPermission(myPermissions, Permissions.MANAGE_CHANNELS)
+    || hasPermission(myPermissions, Permissions.MANAGE_ROLES);
 
   const members = usingMockData
     ? MOCK_MEMBERS
-    : [{ id: currentUser.id, username: currentUser.username, display_name: currentUser.display_name, status: "online" as const }];
+    : [{ id: currentUser.id, username: currentUser.username, display_name: currentUser.display_name, avatar_url: currentUser.avatar_url, status: (currentUser.status || "online") as "online" | "idle" | "dnd" | "offline", status_message: currentUser.status_message }];
+
+  // Build a sender_id → display name map for ChatView
+  const userMap: Record<string, string> = {};
+  userMap[currentUser.id] = currentUser.display_name || currentUser.username;
+  for (const m of members) {
+    userMap[m.id] = m.display_name || m.username;
+  }
 
   return (
     <div className="app-layout">
@@ -175,41 +299,43 @@ export const AppLayout: React.FC<Props> = ({ currentUser }) => {
       {activeServer && (
         <ChannelList
           serverName={activeServer.name}
+          serverId={activeServer.id}
           channels={channels}
           activeChannelId={activeChannelId}
           currentUser={currentUser}
           onSelect={setActiveChannelId}
+          onAddChannel={() => setShowAddChannel(true)}
+          onOpenSettings={() => setShowSettings(true)}
+          onOpenServerSettings={() => setShowServerSettings(true)}
+          onDeleteChannel={handleDeleteChannel}
+          canManageChannels={canManageChannels}
+          canOpenServerSettings={canOpenServerSettings}
         />
       )}
 
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+      <div className="chat-area">
         {activeChannel ? (
           <>
             <ChatView
               channelName={activeChannel.name}
               channelTopic={activeChannel.topic}
               messages={messages}
+              userMap={userMap}
+              currentUserId={currentUser.id}
+              onDeleteMessage={handleDeleteMessage}
+              canManageMessages={canManageMessages}
             />
-            <div style={{ padding: "0 16px 16px", background: "#354E4B" }}>
-              <MessageInput
-                channelId={activeChannel.id}
-                channelName={activeChannel.name}
-                onMessageSent={() => {}}
-              />
-            </div>
+            <MessageInput
+              channelId={activeChannel.id}
+              channelName={activeChannel.name}
+              onMessageSent={handleMessageSent}
+              mockMode={usingMockData}
+              wsConnected={hermesConnected}
+              senderId={currentUser.id}
+            />
           </>
         ) : (
-          <div
-            style={{
-              flex: 1,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              background: "#354E4B",
-              color: "#656255",
-              fontSize: 16,
-            }}
-          >
+          <div className="chat-area__empty">
             {servers.length === 0
               ? "Create a server to get started"
               : "Select a channel"}
@@ -221,13 +347,16 @@ export const AppLayout: React.FC<Props> = ({ currentUser }) => {
         <MemberList members={members} />
       )}
 
+      {/* Create Server Modal */}
       <Modal
         title="Create Server"
         visible={showAddServer}
         onOk={handleCreateServer}
         onCancel={() => setShowAddServer(false)}
         okText="Create"
-        style={{ backgroundColor: "#354E4B" }}
+        cancelText="Cancel"
+        maskClosable={false}
+        style={{ backgroundColor: "#2B2D31" }}
       >
         <Input
           value={newServerName}
@@ -237,6 +366,59 @@ export const AppLayout: React.FC<Props> = ({ currentUser }) => {
           autoFocus
         />
       </Modal>
+
+      {/* Create Channel Modal */}
+      <Modal
+        title="Create Channel"
+        visible={showAddChannel}
+        onOk={handleCreateChannel}
+        onCancel={() => { setShowAddChannel(false); setNewChannelName(""); setNewChannelType("text"); }}
+        okText="Create"
+        cancelText="Cancel"
+        maskClosable={false}
+        style={{ backgroundColor: "#2B2D31" }}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <Input
+            value={newChannelName}
+            onChange={setNewChannelName}
+            placeholder="Channel name"
+            onKeyDown={(e) => e.key === "Enter" && handleCreateChannel()}
+            autoFocus
+          />
+          <Select
+            value={newChannelType}
+            onChange={(v) => setNewChannelType(v as "text" | "voice")}
+            style={{ width: "100%" }}
+          >
+            <Select.Option value="text">Text Channel</Select.Option>
+            <Select.Option value="voice">Voice Channel</Select.Option>
+          </Select>
+        </div>
+      </Modal>
+
+      {/* User Settings overlay */}
+      {showSettings && (
+        <SettingsPanel
+          currentUser={currentUser}
+          onClose={() => setShowSettings(false)}
+          onLogout={() => {
+            setShowSettings(false);
+            if (onLogout) onLogout();
+          }}
+          onUserUpdated={onUserUpdated}
+        />
+      )}
+
+      {/* Server Settings overlay */}
+      {showServerSettings && activeServer && (
+        <ServerSettingsPanel
+          server={activeServer}
+          currentUser={currentUser}
+          myPermissions={myPermissions}
+          onClose={() => setShowServerSettings(false)}
+        />
+      )}
     </div>
   );
 };

@@ -26,6 +26,9 @@ class User(UUIDPrimaryKey, TimestampMixin, Base):
     password_hash: Mapped[str] = mapped_column(String(128), nullable=False)
     display_name: Mapped[str | None] = mapped_column(String(64))
     avatar_url: Mapped[str | None] = mapped_column(String(512))
+    banner_url: Mapped[str | None] = mapped_column(String(512))
+    status: Mapped[str] = mapped_column(String(16), default="online", nullable=False, server_default="online")
+    status_message: Mapped[str | None] = mapped_column(String(128))
 
     # Relationships
     owned_servers = relationship("Server", back_populates="owner", lazy="selectin")

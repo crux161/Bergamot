@@ -51,26 +51,26 @@ export const LoginScreen: React.FC<Props> = ({ onLoggedIn }) => {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "#2E372E",
+        background: "#1E1F22",
       }}
     >
       <div
         style={{
           width: 400,
           padding: 40,
-          background: "#354E4B",
+          background: "#2B2D31",
           borderRadius: 12,
-          border: "1px solid #3A403B",
+          border: "1px solid #3F4147",
         }}
       >
         <div style={{ textAlign: "center", marginBottom: 32 }}>
           <Title
             heading={3}
-            style={{ color: "#A5BA93", marginBottom: 8 }}
+            style={{ color: "#E0E1E5", marginBottom: 8 }}
           >
             Bergamot
           </Title>
-          <Text style={{ color: "#749F8D" }}>
+          <Text style={{ color: "#B5BAC1" }}>
             {isRegister ? "Create your account" : "Welcome back"}
           </Text>
         </div>
@@ -84,7 +84,7 @@ export const LoginScreen: React.FC<Props> = ({ onLoggedIn }) => {
             label="Username"
             prefix={<IconUser />}
             rules={[{ required: true, message: "Required" }]}
-            style={{ background: "#3A403B", borderColor: "#374231" }}
+            style={{ background: "#383A40", borderColor: "#3F4147" }}
           />
 
           {isRegister && (
@@ -96,7 +96,7 @@ export const LoginScreen: React.FC<Props> = ({ onLoggedIn }) => {
                 { required: true, message: "Required" },
                 { type: "email", message: "Invalid email" },
               ]}
-              style={{ background: "#3A403B", borderColor: "#374231" }}
+              style={{ background: "#383A40", borderColor: "#3F4147" }}
             />
           )}
 
@@ -109,7 +109,7 @@ export const LoginScreen: React.FC<Props> = ({ onLoggedIn }) => {
               { required: true, message: "Required" },
               { min: 8, message: "Min 8 characters" },
             ]}
-            style={{ background: "#3A403B", borderColor: "#374231" }}
+            style={{ background: "#383A40", borderColor: "#3F4147" }}
           />
 
           <Button
@@ -132,7 +132,7 @@ export const LoginScreen: React.FC<Props> = ({ onLoggedIn }) => {
 
         <div style={{ textAlign: "center", marginTop: 20 }}>
           <Text
-            style={{ color: "#749F8D", cursor: "pointer" }}
+            style={{ color: "#B5BAC1", cursor: "pointer" }}
             onClick={() => setIsRegister(!isRegister)}
           >
             {isRegister

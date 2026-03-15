@@ -13,7 +13,7 @@ function createWindow() {
     icon: path.join(__dirname, "../../resources/icons/macOS/IMG_6739.icns"),
     titleBarStyle: "hiddenInset",
     trafficLightPosition: { x: 16, y: 16 },
-    backgroundColor: "#2E372E", // Aimirucha — deepest background
+    backgroundColor: "#1E1F22", // Sumi — deepest background
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,

@@ -29,6 +29,12 @@ const App: React.FC = () => {
     setUser(u);
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem("bergamot_token");
+    setToken(null);
+    setUser(null);
+  };
+
   if (loading) {
     return (
       <div
@@ -37,8 +43,8 @@ const App: React.FC = () => {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#2E372E",
-          color: "#749F8D",
+          background: "#1E1F22",
+          color: "#80848E",
           fontSize: 16,
         }}
       >
@@ -54,7 +60,7 @@ const App: React.FC = () => {
 
   // Authenticated — AppLayout is self-contained
   // (it manages servers, channels, messages, and mock-data fallback internally)
-  return <AppLayout currentUser={user} />;
+  return <AppLayout currentUser={user} onLogout={handleLogout} onUserUpdated={setUser} />;
 };
 
 export default App;

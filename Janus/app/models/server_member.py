@@ -24,3 +24,6 @@ class ServerMember(UUIDPrimaryKey, TimestampMixin, Base):
     # Relationships
     user = relationship("User", back_populates="memberships", lazy="joined")
     server = relationship("Server", back_populates="members", lazy="joined")
+    member_roles = relationship(
+        "MemberRole", back_populates="member", lazy="selectin", cascade="all, delete-orphan"
+    )

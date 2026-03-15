@@ -9,7 +9,7 @@ from app.core.database import get_session
 from app.core.deps import get_current_user
 from app.core.security import create_access_token, hash_password, verify_password
 from app.models.user import User
-from app.schemas.user import Token, UserCreate, UserRead
+from app.schemas.user import Token, UserCreate, UserRead, UserUpdate
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -68,4 +68,24 @@ async def login(
 @router.get("/me", response_model=UserRead)
 async def me(current_user: User = Depends(get_current_user)):
     """Return the currently authenticated user's profile."""
+    return current_user
+
+
+@router.patch("/me", response_model=UserRead)
+async def update_me(
+    body: UserUpdate,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    """Update the currently authenticated user's profile.
+
+    Only non-None fields in the request body are applied.
+    """
+    update_data = body.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(current_user, field, value)
+
+    session.add(current_user)
+    await session.commit()
+    await session.refresh(current_user)
     return current_user

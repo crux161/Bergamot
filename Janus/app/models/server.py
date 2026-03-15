@@ -26,3 +26,6 @@ class Server(UUIDPrimaryKey, TimestampMixin, Base):
     members = relationship(
         "ServerMember", back_populates="server", lazy="selectin", cascade="all, delete-orphan"
     )
+    roles = relationship(
+        "Role", back_populates="server", lazy="selectin", cascade="all, delete-orphan"
+    )

@@ -12,6 +12,13 @@ const HERMES_URL =
 let socket: Socket | null = null;
 const activeChannels = new Map<string, Channel>();
 
+export type AttachmentPayload = {
+  id: string;
+  filename: string;
+  content_type: string;
+  url: string;
+};
+
 export type MessagePayload = {
   id: string;
   content: string;
@@ -19,6 +26,7 @@ export type MessagePayload = {
   channel_id: string;
   timestamp: string;
   nonce?: string;
+  attachments?: AttachmentPayload[];
 };
 
 export type MessageHandler = (msg: MessagePayload) => void;
@@ -34,10 +42,17 @@ export function connect() {
     heartbeatIntervalMs: 30000,
   });
 
-  socket.onError(() => console.error("[Hermes] Socket error"));
-  socket.onClose(() => console.log("[Hermes] Socket closed"));
-
   socket.connect();
+}
+
+/** Register lifecycle callbacks on the underlying socket. */
+export function onOpen(cb: () => void) { socket?.onOpen(cb); }
+export function onError(cb: (err: any) => void) { socket?.onError(cb); }
+export function onClose(cb: (event: any) => void) { socket?.onClose(cb); }
+
+/** Check if we have an active channel for the given ID. */
+export function isJoined(channelId: string): boolean {
+  return activeChannels.has(channelId);
 }
 
 export function disconnect() {
@@ -94,13 +109,14 @@ export function leaveChannel(channelId: string) {
 export function sendMessage(
   channelId: string,
   content: string,
-  nonce?: string
+  nonce?: string,
+  attachments?: AttachmentPayload[]
 ): Promise<MessagePayload> {
   const ch = activeChannels.get(channelId);
   if (!ch) throw new Error(`Not joined to channel ${channelId}`);
 
   return new Promise((resolve, reject) => {
-    ch.push("new_message", { content, nonce })
+    ch.push("new_message", { content, nonce, attachments })
       .receive("ok", (msg: MessagePayload) => resolve(msg))
       .receive("error", (err) => reject(new Error(JSON.stringify(err))))
       .receive("timeout", () => reject(new Error("Message send timed out")));

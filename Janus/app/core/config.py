@@ -41,6 +41,10 @@ class Settings(BaseSettings):
             f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
         )
 
+    # File uploads
+    UPLOAD_DIR: str = "uploads"
+    MAX_UPLOAD_SIZE_MB: int = 10
+
     # JWT
     SECRET_KEY: str = "CHANGE-ME-in-production-use-openssl-rand-hex-32"
     ALGORITHM: str = "HS256"

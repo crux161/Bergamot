@@ -38,6 +38,122 @@
   --semi-color-link-visited: #80848e;
 
   --semi-color-focus-border: #6b9362;
+
+  // ── Discord / BetterDiscord CSS variable aliases ──
+  // BD themes override these at :root. Bergamot reads them as fallbacks
+  // so that loaded BD themes can influence Semi components and future
+  // code that references these variables.
+
+  // Backgrounds
+  --background-primary: var(--semi-color-bg-2);           // #313338 — main chat area
+  --background-secondary: var(--semi-color-bg-1);          // #2b2d31 — sidebars
+  --background-secondary-alt: var(--semi-color-bg-0);      // #1e1f22 — server list
+  --background-tertiary: var(--semi-color-bg-0);           // #1e1f22 — deepest
+  --background-floating: var(--semi-color-bg-3);           // #383a40 — modals, popovers
+  --background-modifier-hover: rgba(79, 84, 92, 0.16);
+  --background-modifier-selected: rgba(79, 84, 92, 0.32);
+  --background-modifier-active: rgba(79, 84, 92, 0.48);
+
+  // Text
+  --text-normal: var(--semi-color-text-1);                 // #b5bac1
+  --text-muted: var(--semi-color-text-2);                  // #80848e
+  --text-link: var(--semi-color-link);                     // #6b9362
+  --header-primary: var(--semi-color-text-0);              // #e0e1e5
+  --header-secondary: var(--semi-color-text-1);            // #b5bac1
+
+  // Interactive elements
+  --interactive-normal: var(--semi-color-text-1);          // #b5bac1
+  --interactive-hover: var(--semi-color-text-0);           // #e0e1e5
+  --interactive-active: var(--semi-color-text-0);          // #e0e1e5
+  --interactive-muted: var(--semi-color-text-3);           // #5c5e66
+
+  // Input areas
+  --channeltextarea-background: var(--semi-color-fill-0);  // #383a40
+  --input-background: var(--semi-color-bg-0);              // #1e1f22
+
+  // Accent / brand
+  --brand-experiment: var(--semi-color-primary);            // #6b9362
+  --brand-experiment-560: var(--semi-color-primary-hover);  // #5a8352
+
+  // Borders & scrollbars
+  --background-modifier-accent: var(--semi-color-border);  // #3f4147
+  --scrollbar-thin-thumb: var(--semi-color-fill-2);        // #4e5058
+  --scrollbar-thin-track: transparent;
+  --scrollbar-auto-thumb: var(--semi-color-fill-2);
+  --scrollbar-auto-track: var(--semi-color-bg-1);
+
+  // Status colors (commonly referenced by BD themes)
+  --status-positive: #23a55a;
+  --status-warning: #f0b232;
+  --status-danger: #f23f43;
+}
+
+// ── Light theme overrides ──
+// When .theme-light is on <html>, override the dark-first tokens.
+:root.theme-light {
+  --semi-color-primary: #5a8352;
+  --semi-color-primary-hover: #4a7343;
+  --semi-color-primary-active: #3d5d42;
+  --semi-color-primary-light-default: #d4e6cf;
+  --semi-color-primary-light-hover: #c0d9b8;
+  --semi-color-primary-light-active: #a8c8a0;
+
+  --semi-color-bg-0: #e3e5e8;
+  --semi-color-bg-1: #f2f3f5;
+  --semi-color-bg-2: #ffffff;
+  --semi-color-bg-3: #e3e5e8;
+  --semi-color-bg-4: #ebedef;
+
+  --semi-color-fill-0: #e3e5e8;
+  --semi-color-fill-1: #ebedef;
+  --semi-color-fill-2: #d3d5d8;
+
+  --semi-color-border: #e3e5e8;
+
+  --semi-color-text-0: #060607;
+  --semi-color-text-1: #313338;
+  --semi-color-text-2: #5c5e66;
+  --semi-color-text-3: #80848e;
+
+  --semi-color-link: #5a8352;
+  --semi-color-link-hover: #4a7343;
+  --semi-color-link-active: #3d5d42;
+  --semi-color-link-visited: #80848e;
+
+  --semi-color-focus-border: #5a8352;
+
+  // Discord aliases (light)
+  --background-primary: #ffffff;
+  --background-secondary: #f2f3f5;
+  --background-secondary-alt: #ebedef;
+  --background-tertiary: #e3e5e8;
+  --background-floating: #ffffff;
+  --background-modifier-hover: rgba(116, 127, 141, 0.08);
+  --background-modifier-selected: rgba(116, 127, 141, 0.16);
+  --background-modifier-active: rgba(116, 127, 141, 0.24);
+
+  --text-normal: #313338;
+  --text-muted: #5c5e66;
+  --text-link: #5a8352;
+  --header-primary: #060607;
+  --header-secondary: #4e5058;
+
+  --interactive-normal: #4e5058;
+  --interactive-hover: #313338;
+  --interactive-active: #060607;
+  --interactive-muted: #c7ccd1;
+
+  --channeltextarea-background: #ebedef;
+  --input-background: #e3e5e8;
+
+  --brand-experiment: #5a8352;
+  --brand-experiment-560: #4a7343;
+
+  --background-modifier-accent: #e3e5e8;
+  --scrollbar-thin-thumb: #c7ccd1;
+  --scrollbar-thin-track: transparent;
+  --scrollbar-auto-thumb: #c7ccd1;
+  --scrollbar-auto-track: #f2f3f5;
 }
 
 // ── Global reset ──
@@ -56,8 +172,8 @@ body,
   width: 100%;
   overflow: hidden;
   font-family: var(--semi-font-family);
-  background-color: #1e1f22;
-  color: #e0e1e5;
+  background-color: var(--background-tertiary, #1e1f22);
+  color: var(--text-normal, #e0e1e5);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -80,20 +196,20 @@ body,
 }
 
 ::-webkit-scrollbar-track {
-  background: #2b2d31;
+  background: var(--scrollbar-auto-track, #2b2d31);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #4e5058;
+  background: var(--scrollbar-auto-thumb, #4e5058);
   border-radius: 4px;
 
   &:hover {
-    background: #6d6f78;
+    background: var(--scrollbar-thin-thumb, #6d6f78);
   }
 }
 
 // Selection
 ::selection {
-  background: #2e4a3e;
-  color: #e0e1e5;
+  background: var(--semi-color-primary-light-default, #2e4a3e);
+  color: var(--header-primary, #e0e1e5);
 }

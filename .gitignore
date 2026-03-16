@@ -64,6 +64,8 @@ erl_crash.dump
 # =========================
 *.log
 docker-compose.override.yml
+.backend.pids
+.backend-logs/
 
 # =========================
 # Documentation output

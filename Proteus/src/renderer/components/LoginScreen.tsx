@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { Button, Input, Form, Toast, Typography } from "@douyinfe/semi-ui";
-import { IconUser, IconLock, IconMail } from "@douyinfe/semi-icons";
+import { PhIcon } from "./PhIcon";
 import * as api from "../services/api";
+import { getConfiguredServerUrl, setServerUrl } from "../services/api";
 
 const { Title, Text } = Typography;
 
@@ -45,32 +46,13 @@ export const LoginScreen: React.FC<Props> = ({ onLoggedIn }) => {
   };
 
   return (
-    <div
-      style={{
-        height: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "#1E1F22",
-      }}
-    >
-      <div
-        style={{
-          width: 400,
-          padding: 40,
-          background: "#2B2D31",
-          borderRadius: 12,
-          border: "1px solid #3F4147",
-        }}
-      >
-        <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <Title
-            heading={3}
-            style={{ color: "#E0E1E5", marginBottom: 8 }}
-          >
+    <div className="login-screen">
+      <div className="login-card">
+        <div className="login-card__header">
+          <Title heading={3} className="login-card__title">
             Bergamot
           </Title>
-          <Text style={{ color: "#B5BAC1" }}>
+          <Text className="login-card__subtitle">
             {isRegister ? "Create your account" : "Welcome back"}
           </Text>
         </div>
@@ -82,21 +64,21 @@ export const LoginScreen: React.FC<Props> = ({ onLoggedIn }) => {
           <Form.Input
             field="username"
             label="Username"
-            prefix={<IconUser />}
+            prefix={<PhIcon name="user" />}
             rules={[{ required: true, message: "Required" }]}
-            style={{ background: "#383A40", borderColor: "#3F4147" }}
+            className="login-card__input"
           />
 
           {isRegister && (
             <Form.Input
               field="email"
               label="Email"
-              prefix={<IconMail />}
+              prefix={<PhIcon name="envelope" />}
               rules={[
                 { required: true, message: "Required" },
                 { type: "email", message: "Invalid email" },
               ]}
-              style={{ background: "#383A40", borderColor: "#3F4147" }}
+              className="login-card__input"
             />
           )}
 
@@ -104,12 +86,12 @@ export const LoginScreen: React.FC<Props> = ({ onLoggedIn }) => {
             field="password"
             label="Password"
             mode="password"
-            prefix={<IconLock />}
+            prefix={<PhIcon name="lock" />}
             rules={[
               { required: true, message: "Required" },
               { min: 8, message: "Min 8 characters" },
             ]}
-            style={{ background: "#383A40", borderColor: "#3F4147" }}
+            className="login-card__input"
           />
 
           <Button
@@ -117,22 +99,15 @@ export const LoginScreen: React.FC<Props> = ({ onLoggedIn }) => {
             theme="solid"
             block
             loading={loading}
-            style={{
-              marginTop: 16,
-              background: "#6B9362",
-              borderColor: "#6B9362",
-              height: 42,
-              fontSize: 15,
-              fontWeight: 600,
-            }}
+            className="login-card__submit"
           >
             {isRegister ? "Register" : "Log In"}
           </Button>
         </Form>
 
-        <div style={{ textAlign: "center", marginTop: 20 }}>
+        <div className="login-card__toggle">
           <Text
-            style={{ color: "#B5BAC1", cursor: "pointer" }}
+            className="login-card__toggle-text"
             onClick={() => setIsRegister(!isRegister)}
           >
             {isRegister
@@ -140,6 +115,69 @@ export const LoginScreen: React.FC<Props> = ({ onLoggedIn }) => {
               : "Need an account? Register"}
           </Text>
         </div>
+
+        <ServerUrlConfig />
+      </div>
+    </div>
+  );
+};
+
+/** Collapsible server URL config for dev/advanced use. */
+const ServerUrlConfig: React.FC = () => {
+  const [open, setOpen] = useState(false);
+  const [url, setUrl] = useState(getConfiguredServerUrl());
+  const current = getConfiguredServerUrl();
+  const isDirty = url.replace(/\/+$/, "").trim() !== current;
+
+  const handleSave = () => {
+    const cleaned = url.replace(/\/+$/, "").trim();
+    if (!cleaned) return;
+    try {
+      new URL(cleaned);
+    } catch {
+      Toast.error({ content: "Invalid URL", duration: 2 });
+      return;
+    }
+    Toast.info({ content: "Reconnecting…", duration: 1.5 });
+    setTimeout(() => setServerUrl(cleaned), 200);
+  };
+
+  if (!open) {
+    return (
+      <div className="login-card__server-hint" onClick={() => setOpen(true)}>
+        <Text className="login-card__server-hint-text">
+          <PhIcon name="gear" size={14} style={{ marginRight: 4, verticalAlign: "middle" }} />
+          Server: {current}
+        </Text>
+      </div>
+    );
+  }
+
+  return (
+    <div className="login-card__server-config">
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <Input
+          size="small"
+          value={url}
+          onChange={setUrl}
+          placeholder="http://localhost:8000"
+          className="login-card__server-input"
+          onKeyDown={(e) => e.key === "Enter" && isDirty && handleSave()}
+        />
+        <Button
+          size="small"
+          disabled={!isDirty}
+          className={`login-card__server-save ${isDirty ? "login-card__server-save--dirty" : ""}`}
+          onClick={handleSave}
+        >
+          Save
+        </Button>
+      </div>
+      <div
+        className="login-card__server-close"
+        onClick={() => { setOpen(false); setUrl(current); }}
+      >
+        <Text className="login-card__server-hint-text">Close</Text>
       </div>
     </div>
   );

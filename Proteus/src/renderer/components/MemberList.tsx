@@ -1,4 +1,5 @@
 import React from "react";
+import { getConfiguredServerUrl } from "../services/api";
 
 interface Member {
   id: string;
@@ -13,11 +14,9 @@ interface Props {
   members: Member[];
 }
 
-const ROOT_URL = ((window as any).__BERGAMOT_API_URL__ || "http://localhost:8000/api/v1").replace(/\/api\/v1$/, "");
-
 function resolveUrl(url: string | null | undefined): string | null {
   if (!url) return null;
-  return url.startsWith("/") ? `${ROOT_URL}${url}` : url;
+  return url.startsWith("/") ? `${getConfiguredServerUrl()}${url}` : url;
 }
 
 export const MemberList: React.FC<Props> = ({ members }) => {

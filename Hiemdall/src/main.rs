@@ -28,7 +28,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // --- Config from env ---
     let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
     let kafka_brokers =
-        std::env::var("KAFKA_BROKERS").unwrap_or_else(|_| "127.0.0.1:9092".to_string());
+        std::env::var("KAFKA_BROKERS").unwrap_or_else(|_| "localhost:9093".to_string());
     let kafka_group =
         std::env::var("KAFKA_GROUP_ID").unwrap_or_else(|_| "heimdall-readers".to_string());
     let kafka_topic =

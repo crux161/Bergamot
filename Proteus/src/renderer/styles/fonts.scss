@@ -1,4 +1,91 @@
-// HarmonyOS Sans — loaded from resources
+// ── Phosphor Icons ──
+// Regular weight (default outline style)
+@font-face {
+  font-family: "Phosphor";
+  src: url("../../../resources/phosphor-icons/Fonts/regular/Phosphor.woff2") format("woff2"),
+       url("../../../resources/phosphor-icons/Fonts/regular/Phosphor.woff") format("woff"),
+       url("../../../resources/phosphor-icons/Fonts/regular/Phosphor.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: block;
+}
+
+// Fill weight (solid icons)
+@font-face {
+  font-family: "Phosphor-Fill";
+  src: url("../../../resources/phosphor-icons/Fonts/fill/Phosphor-Fill.woff2") format("woff2"),
+       url("../../../resources/phosphor-icons/Fonts/fill/Phosphor-Fill.woff") format("woff"),
+       url("../../../resources/phosphor-icons/Fonts/fill/Phosphor-Fill.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: block;
+}
+
+// Bold weight
+@font-face {
+  font-family: "Phosphor-Bold";
+  src: url("../../../resources/phosphor-icons/Fonts/bold/Phosphor-Bold.woff2") format("woff2"),
+       url("../../../resources/phosphor-icons/Fonts/bold/Phosphor-Bold.woff") format("woff"),
+       url("../../../resources/phosphor-icons/Fonts/bold/Phosphor-Bold.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: block;
+}
+
+// ── Phosphor base classes ──
+.ph {
+  font-family: "Phosphor" !important;
+  speak: never;
+  font-style: normal;
+  font-weight: normal;
+  font-variant: normal;
+  text-transform: none;
+  line-height: 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.ph-fill {
+  font-family: "Phosphor-Fill" !important;
+  speak: never;
+  font-style: normal;
+  font-weight: normal;
+  font-variant: normal;
+  text-transform: none;
+  line-height: 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.ph-bold {
+  font-family: "Phosphor-Bold" !important;
+  speak: never;
+  font-style: normal;
+  font-weight: normal;
+  font-variant: normal;
+  text-transform: none;
+  line-height: 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+// ── Icon glyph definitions (only icons used in Proteus) ──
+.ph-hash:before { content: "\e2a2"; }
+.ph-speaker-high:before { content: "\e44a"; }
+.ph-plus:before { content: "\e3d4"; }
+.ph-gear:before { content: "\e270"; }
+.ph-paper-plane-right:before { content: "\e396"; }
+.ph-image:before { content: "\e2ca"; }
+.ph-x:before { content: "\e4f6"; }
+.ph-camera:before { content: "\e10e"; }
+.ph-user:before { content: "\e4c2"; }
+.ph-lock:before { content: "\e2fa"; }
+.ph-envelope:before { content: "\e214"; }
+.ph-trash:before { content: "\e4a6"; }
+.ph-sun:before { content: "\e472"; }
+.ph-moon:before { content: "\e330"; }
+
+// ── HarmonyOS Sans ──
 // We use the Latin/standard variant; SC/TC available for CJK support
 
 @font-face {

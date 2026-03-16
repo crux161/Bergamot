@@ -11,8 +11,8 @@
     "start": "electron-forge start",
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
-    "package": "electron-forge package",
-    "make": "electron-forge make"
+    "package": "npm run build && electron-forge package",
+    "make": "npm run build && electron-forge make"
   },
   "dependencies": {
     "@douyinfe/semi-icons": "^2.71",

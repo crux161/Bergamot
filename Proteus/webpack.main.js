@@ -1,13 +1,7 @@
 const path = require("path");
 
-module.exports = {
+const commonConfig = {
   mode: "development",
-  target: "electron-main",
-  entry: "./src/main/main.ts",
-  output: {
-    path: path.resolve(__dirname, "dist/main"),
-    filename: "main.js",
-  },
   resolve: {
     extensions: [".ts", ".js"],
   },
@@ -25,3 +19,24 @@ module.exports = {
     __filename: false,
   },
 };
+
+module.exports = [
+  {
+    ...commonConfig,
+    target: "electron-main",
+    entry: "./src/main/main.ts",
+    output: {
+      path: path.resolve(__dirname, "dist/main"),
+      filename: "main.js",
+    },
+  },
+  {
+    ...commonConfig,
+    target: "electron-preload",
+    entry: "./src/main/preload.ts",
+    output: {
+      path: path.resolve(__dirname, "dist/main"),
+      filename: "preload.js",
+    },
+  },
+];

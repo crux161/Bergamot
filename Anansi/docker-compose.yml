@@ -187,3 +187,8 @@ services:
 volumes:
   kafka_data:
     driver: local
+
+networks:
+  default:
+    name: anansi
+    driver: bridge

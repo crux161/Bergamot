@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Modal, Input, Toast, Select } from "@douyinfe/semi-ui";
 import { ServerList } from "../components/ServerList";
 import { ChannelList } from "../components/ChannelList";
@@ -7,6 +7,7 @@ import { MessageInput } from "../components/MessageInput";
 import { MemberList } from "../components/MemberList";
 import { SettingsPanel } from "../components/SettingsPanel";
 import { ServerSettingsPanel } from "../components/ServerSettingsPanel";
+import { TypingIndicator, TypingUser } from "../components/TypingIndicator";
 import * as api from "../services/api";
 import { Permissions, hasPermission } from "../services/api";
 import * as socket from "../services/socket";
@@ -77,6 +78,8 @@ export const AppLayout: React.FC<Props> = ({ currentUser, onLogout, onUserUpdate
   const [usingMockData, setUsingMockData] = useState(false);
   const [hermesConnected, setHermesConnected] = useState(false);
   const [myPermissions, setMyPermissions] = useState<number>(ALL_PERMS);
+  const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
+  const typingTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   // Connect to Hermes on mount (graceful fallback)
   useEffect(() => {
@@ -185,16 +188,51 @@ export const AppLayout: React.FC<Props> = ({ currentUser, onLogout, onUserUpdate
         if (msg.nonce && prev.some((m) => m.nonce === msg.nonce)) return prev;
         return [...prev, msg];
       });
+
+      // When a user sends a message, remove them from the typing list
+      setTypingUsers((prev) => prev.filter((u) => u.user_id !== msg.sender_id));
+      const existingTimer = typingTimers.current.get(msg.sender_id);
+      if (existingTimer) {
+        clearTimeout(existingTimer);
+        typingTimers.current.delete(msg.sender_id);
+      }
+    };
+
+    const handleTyping = (payload: { user_id: string; username: string }) => {
+      // Don't show our own typing indicator
+      if (payload.user_id === currentUser.id) return;
+
+      setTypingUsers((prev) => {
+        const exists = prev.some((u) => u.user_id === payload.user_id);
+        if (!exists) {
+          return [...prev, { user_id: payload.user_id, username: payload.username }];
+        }
+        return prev;
+      });
+
+      // Reset the 3-second auto-expiry timer for this user
+      const existing = typingTimers.current.get(payload.user_id);
+      if (existing) clearTimeout(existing);
+
+      const timer = setTimeout(() => {
+        setTypingUsers((prev) => prev.filter((u) => u.user_id !== payload.user_id));
+        typingTimers.current.delete(payload.user_id);
+      }, 3000);
+      typingTimers.current.set(payload.user_id, timer);
     };
 
     try {
-      socket.joinChannel(activeChannelId, handleMessage);
+      socket.joinChannel(activeChannelId, handleMessage, handleTyping);
     } catch {
       // WebSocket unavailable — history from Janus is still shown
     }
 
     return () => {
       try { socket.leaveChannel(activeChannelId); } catch { /* noop */ }
+      // Clear all typing state when leaving a channel
+      setTypingUsers([]);
+      typingTimers.current.forEach((t) => clearTimeout(t));
+      typingTimers.current.clear();
     };
   }, [activeChannelId, usingMockData]);
 
@@ -325,6 +363,7 @@ export const AppLayout: React.FC<Props> = ({ currentUser, onLogout, onUserUpdate
               onDeleteMessage={handleDeleteMessage}
               canManageMessages={canManageMessages}
             />
+            <TypingIndicator typingUsers={typingUsers} />
             <MessageInput
               channelId={activeChannel.id}
               channelName={activeChannel.name}
@@ -332,6 +371,7 @@ export const AppLayout: React.FC<Props> = ({ currentUser, onLogout, onUserUpdate
               mockMode={usingMockData}
               wsConnected={hermesConnected}
               senderId={currentUser.id}
+              senderName={currentUser.display_name || currentUser.username}
             />
           </>
         ) : (

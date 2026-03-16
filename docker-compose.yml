@@ -3,8 +3,8 @@
 # ║                                                                    ║
 # ║  Starts the shared infrastructure layer for local development:     ║
 # ║  Kafka (Anansi), PostgreSQL (Janus), ScyllaDB (Thoth), Redis      ║
-# ║  (Heimdall).  Individual services have their own compose files     ║
-# ║  for standalone development.                                       ║
+# ║  (Heimdall), MinIO (Atlas).  Individual services have their own   ║
+# ║  compose files for standalone development.                         ║
 # ╚══════════════════════════════════════════════════════════════════════╝
 
 services:
@@ -107,8 +107,55 @@ services:
       timeout: 3s
       retries: 5
 
+  # ==========================================
+  # ATLAS: Object Storage CDN (MinIO / S3)
+  # ==========================================
+
+  # Core S3-compatible object store for emoji, attachments, avatars
+  atlas:
+    image: minio/minio:latest
+    container_name: atlas
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # Web console
+    environment:
+      MINIO_ROOT_USER: bergamot_admin
+      MINIO_ROOT_PASSWORD: super_secret_minio_password
+    volumes:
+      - atlas_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # One-shot init container: creates the CDN bucket & sets public-read policy
+  atlas-init:
+    image: minio/mc:latest
+    container_name: atlas-init
+    depends_on:
+      atlas:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+        sleep 3 &&
+        mc alias set atlas http://atlas:9000 bergamot_admin super_secret_minio_password &&
+        mc mb --ignore-existing atlas/bergamot-cdn &&
+        mc anonymous set download atlas/bergamot-cdn &&
+        echo '=== Atlas CDN bucket ready ==='
+      "
+    restart: "no"
+
 volumes:
   kafka_data:
   janus_data:
   thoth_data:
   hiemdall_data:
+  atlas_data:
+
+networks:
+  default:
+    name: anansi
+    driver: bridge

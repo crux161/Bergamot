@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Button, Input, Switch, Toast, Modal, Avatar } from "@douyinfe/semi-ui";
-import { IconClose, IconPlus, IconDelete } from "@douyinfe/semi-icons";
+import { PhIcon } from "./PhIcon";
 import type { ServerRead, UserRead, RoleRead, MemberWithRoles } from "../services/api";
 import { Permissions, hasPermission } from "../services/api";
 import * as api from "../services/api";
@@ -94,7 +94,7 @@ export const ServerSettingsPanel: React.FC<Props> = ({
             {navItems.find((i) => i.key === activeKey)?.label}
           </h2>
           <div className="settings-content__close" onClick={onClose}>
-            <IconClose size="large" />
+            <PhIcon name="x" size={24} />
             <span className="settings-content__close-label">ESC</span>
           </div>
         </div>
@@ -270,7 +270,8 @@ const RolesEditor: React.FC<RolesEditorProps> = ({ serverId, roles, members, onC
       <div className="roles-editor__list">
         <div className="roles-editor__list-header">
           <span>Roles — {roles.length}</span>
-          <IconPlus
+          <PhIcon
+            name="plus"
             style={{ cursor: "pointer", color: "#b5bac1" }}
             onClick={handleCreateRole}
           />
@@ -299,7 +300,8 @@ const RolesEditor: React.FC<RolesEditorProps> = ({ serverId, roles, members, onC
                 Edit Role — {selectedRole.name.toUpperCase()}
               </span>
               {!selectedRole.is_default && (
-                <IconDelete
+                <PhIcon
+                  name="trash"
                   style={{ cursor: "pointer", color: "#f23f43" }}
                   onClick={handleDeleteRole}
                 />

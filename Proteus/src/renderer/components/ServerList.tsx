@@ -1,6 +1,6 @@
 import React from "react";
-import { IconPlus } from "@douyinfe/semi-icons";
 import { Tooltip } from "@douyinfe/semi-ui";
+import { PhIcon } from "./PhIcon";
 import type { ServerRead } from "../services/api";
 
 interface Props {
@@ -47,7 +47,7 @@ export const ServerList: React.FC<Props> = ({
           className="server-list__item server-list__add"
           onClick={onAdd}
         >
-          <IconPlus size="large" />
+          <PhIcon name="plus" size={20} />
         </div>
       </Tooltip>
     </div>

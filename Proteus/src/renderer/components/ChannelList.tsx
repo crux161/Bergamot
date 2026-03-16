@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect } from "react";
-import { IconHash, IconVolume1, IconPlus, IconSetting } from "@douyinfe/semi-icons";
+import { PhIcon } from "./PhIcon";
 import type { ChannelRead, UserRead } from "../services/api";
+import { getConfiguredServerUrl } from "../services/api";
 import { Avatar, Modal, Toast, Tooltip } from "@douyinfe/semi-ui";
 
 interface ChannelContextMenuState {
@@ -85,9 +86,11 @@ export const ChannelList: React.FC<Props> = ({
       {icon}
       <span style={{ flex: 1 }}>{ch.name}</span>
       {canManageChannels && ch.id === activeChannelId && (
-        <IconSetting
+        <PhIcon
+          name="gear"
+          size={12}
           className="channel-sidebar__item__gear"
-          style={{ fontSize: 12, color: "#80848e", flexShrink: 0, opacity: 0.6 }}
+          style={{ color: "#80848e", flexShrink: 0, opacity: 0.6 }}
         />
       )}
     </div>
@@ -99,16 +102,20 @@ export const ChannelList: React.FC<Props> = ({
         <span style={{ flex: 1 }}>{serverName}</span>
         {canOpenServerSettings && onOpenServerSettings && (
           <Tooltip content="Server Settings" position="bottom">
-            <IconSetting
-              style={{ cursor: "pointer", fontSize: 14, opacity: 0.7, marginRight: 4 }}
+            <PhIcon
+              name="gear"
+              size={14}
+              style={{ cursor: "pointer", opacity: 0.7, marginRight: 4 }}
               onClick={onOpenServerSettings}
             />
           </Tooltip>
         )}
         {canManageChannels && onAddChannel && (
           <Tooltip content="Create Channel" position="bottom">
-            <IconPlus
-              style={{ cursor: "pointer", fontSize: 14, opacity: 0.7 }}
+            <PhIcon
+              name="plus"
+              size={14}
+              style={{ cursor: "pointer", opacity: 0.7 }}
               onClick={onAddChannel}
             />
           </Tooltip>
@@ -120,7 +127,7 @@ export const ChannelList: React.FC<Props> = ({
           <>
             <div className="channel-sidebar__category">Text Channels</div>
             {textChannels.map((ch) =>
-              renderChannel(ch, <IconHash className="channel-sidebar__item__icon" />)
+              renderChannel(ch, <PhIcon name="hash" className="channel-sidebar__item__icon" />)
             )}
           </>
         )}
@@ -129,7 +136,7 @@ export const ChannelList: React.FC<Props> = ({
           <>
             <div className="channel-sidebar__category">Voice Channels</div>
             {voiceChannels.map((ch) =>
-              renderChannel(ch, <IconVolume1 className="channel-sidebar__item__icon" />)
+              renderChannel(ch, <PhIcon name="speaker-high" className="channel-sidebar__item__icon" />)
             )}
           </>
         )}
@@ -142,7 +149,7 @@ export const ChannelList: React.FC<Props> = ({
               <Avatar
                 size="small"
                 src={currentUser.avatar_url.startsWith("/")
-                  ? `${((window as any).__BERGAMOT_API_URL__ || "http://localhost:8000/api/v1").replace(/\/api\/v1$/, "")}${currentUser.avatar_url}`
+                  ? `${getConfiguredServerUrl()}${currentUser.avatar_url}`
                   : currentUser.avatar_url
                 }
               />
@@ -168,8 +175,10 @@ export const ChannelList: React.FC<Props> = ({
           </div>
           {onOpenSettings && (
             <Tooltip content="User Settings" position="top">
-              <IconSetting
-                style={{ cursor: "pointer", color: "#80848e", fontSize: 16, flexShrink: 0 }}
+              <PhIcon
+                name="gear"
+                size={16}
+                style={{ cursor: "pointer", color: "#80848e", flexShrink: 0 }}
                 onClick={onOpenSettings}
               />
             </Tooltip>

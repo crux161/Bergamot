@@ -32,7 +32,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let scylla_nodes =
         std::env::var("SCYLLA_NODES").unwrap_or_else(|_| "127.0.0.1:9042".to_string());
     let kafka_brokers =
-        std::env::var("KAFKA_BROKERS").unwrap_or_else(|_| "127.0.0.1:9092".to_string());
+        std::env::var("KAFKA_BROKERS").unwrap_or_else(|_| "localhost:9093".to_string());
     let kafka_group = std::env::var("KAFKA_GROUP_ID").unwrap_or_else(|_| "thoth-writers".to_string());
     let kafka_topic = std::env::var("KAFKA_TOPIC").unwrap_or_else(|_| "chat.events".to_string());
     let worker_id: u16 = std::env::var("WORKER_ID")

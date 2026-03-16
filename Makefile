@@ -1,4 +1,7 @@
+SHELL := /bin/bash
+
 .PHONY: infra-up infra-down janus hermes thoth hiemdall apollo proteus \
+       backend-up backend-down \
        docs docs-janus docs-hermes docs-thoth docs-hiemdall docs-apollo
 
 # ============================================================
@@ -39,6 +42,53 @@ apollo:
 
 proteus:
 	cd Proteus && npx concurrently "npm run dev" "wait-on http://localhost:3000 && npm start"
+
+# ============================================================
+# Backend (infrastructure + all services, local)
+# ============================================================
+
+PIDFILE := .backend.pids
+LOGDIR  := .backend-logs
+
+## Start infrastructure then all backend services in the background
+backend-up: infra-up
+	@mkdir -p $(LOGDIR)
+	@rm -f $(PIDFILE)
+	@echo "⏳ Waiting for infrastructure…"
+	@sleep 3
+	@echo "Starting backend services…"
+	@cd Janus && source venv/bin/activate && \
+		nohup uvicorn app.main:app --reload --port 8000 > ../$(LOGDIR)/janus.log 2>&1 & echo $$! >> $(PIDFILE)
+	@cd Hermes && \
+		nohup mix phx.server > ../$(LOGDIR)/hermes.log 2>&1 & echo $$! >> $(PIDFILE)
+	@cd Thoth && \
+		nohup cargo run > ../$(LOGDIR)/thoth.log 2>&1 & echo $$! >> $(PIDFILE)
+	@cd Hiemdall && \
+		nohup cargo run > ../$(LOGDIR)/hiemdall.log 2>&1 & echo $$! >> $(PIDFILE)
+	@cd Apollo && \
+		nohup node src/index.js > ../$(LOGDIR)/apollo.log 2>&1 & echo $$! >> $(PIDFILE)
+	@echo ""
+	@echo "✅ All backend services started."
+	@echo "   PIDs  → $(PIDFILE)"
+	@echo "   Logs  → $(LOGDIR)/"
+	@echo ""
+	@echo "   Stop with:  make backend-down"
+
+## Gracefully stop all backend services then infrastructure
+backend-down:
+	@if [ -f $(PIDFILE) ]; then \
+		echo "Stopping backend services…"; \
+		while read -r pid; do \
+			if kill -0 "$$pid" 2>/dev/null; then \
+				kill "$$pid" && echo "  Stopped PID $$pid"; \
+			fi; \
+		done < $(PIDFILE); \
+		rm -f $(PIDFILE); \
+		echo "✅ All services stopped."; \
+	else \
+		echo "No $(PIDFILE) found — nothing to stop."; \
+	fi
+	@$(MAKE) infra-down
 
 # ============================================================
 # Documentation
@@ -107,13 +157,27 @@ docker-build:
 	docker-compose -f Apollo/docker-compose.yml build
 
 ## Start everything (infrastructure + all services with their own DBs)
+##docker-up:
+##	docker-compose -f Anansi/docker-compose.yml up -d
+##	docker-compose -f Janus/docker-compose.yml up -d
+##	docker-compose -f Hermes/docker-compose.yml up -d
+
 docker-up:
 	docker-compose -f Anansi/docker-compose.yml up -d
+	docker compose up -d atlas atlas-init
 	docker-compose -f Janus/docker-compose.yml up -d
 	docker-compose -f Hermes/docker-compose.yml up -d
+	docker-compose -f Thoth/docker-compose.yml up -d
+	docker-compose -f Hiemdall/docker-compose.yml up -d
+	docker-compose -f Apollo/docker-compose.yml up -d
 
-## Stop all Docker services
+## Stop all Docker services (reverse order of docker-up)
 docker-down:
+	docker-compose -f Apollo/docker-compose.yml down
+	docker-compose -f Hiemdall/docker-compose.yml down
+	docker-compose -f Thoth/docker-compose.yml down
 	docker-compose -f Hermes/docker-compose.yml down
 	docker-compose -f Janus/docker-compose.yml down
+	docker compose down atlas atlas-init
 	docker-compose -f Anansi/docker-compose.yml down
+

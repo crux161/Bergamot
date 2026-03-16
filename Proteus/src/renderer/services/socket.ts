@@ -4,10 +4,22 @@
  */
 
 import { Socket, Channel } from "phoenix";
-import { getToken } from "./api";
+import { getToken, getConfiguredServerUrl } from "./api";
 
-const HERMES_URL =
-  (window as any).__BERGAMOT_WS_URL__ || "ws://localhost:4000/socket";
+/** Derive the Hermes WebSocket URL from the configured server address.
+ *  Default Hermes runs on port 4000 of the same host as the API. */
+function getHermesUrl(): string {
+  const override = (window as any).__BERGAMOT_WS_URL__;
+  if (override) return override;
+
+  try {
+    const api = new URL(getConfiguredServerUrl());
+    const wsProtocol = api.protocol === "https:" ? "wss:" : "ws:";
+    return `${wsProtocol}//${api.hostname}:4000/socket`;
+  } catch {
+    return "ws://localhost:4000/socket";
+  }
+}
 
 let socket: Socket | null = null;
 const activeChannels = new Map<string, Channel>();
@@ -30,14 +42,14 @@ export type MessagePayload = {
 };
 
 export type MessageHandler = (msg: MessagePayload) => void;
-export type TypingHandler = (payload: { user_id: string }) => void;
+export type TypingHandler = (payload: { user_id: string; username: string }) => void;
 
 /** Connect to Hermes. Call after login. */
 export function connect() {
   const token = getToken();
   if (!token) throw new Error("Cannot connect without auth token");
 
-  socket = new Socket(HERMES_URL, {
+  socket = new Socket(getHermesUrl(), {
     params: { token },
     heartbeatIntervalMs: 30000,
   });
@@ -123,9 +135,9 @@ export function sendMessage(
   });
 }
 
-export function sendTyping(channelId: string) {
+export function sendTyping(channelId: string, username?: string) {
   const ch = activeChannels.get(channelId);
   if (ch) {
-    ch.push("typing", {});
+    ch.push("typing", { username: username || "Someone" });
   }
 }

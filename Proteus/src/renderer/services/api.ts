@@ -1,6 +1,30 @@
-const BASE_URL = (window as any).__BERGAMOT_API_URL__ || "http://localhost:8000/api/v1";
-/** Base URL without the /api/v1 suffix, for accessing /uploads static files */
-const ROOT_URL = BASE_URL.replace(/\/api\/v1$/, "");
+// ── Configurable backend URL ──
+// Priority: localStorage override → window global → default localhost
+const SERVER_URL_KEY = "bergamot_server_url";
+const DEFAULT_SERVER = "http://localhost:8000";
+
+function getServerUrl(): string {
+  return localStorage.getItem(SERVER_URL_KEY) || (window as any).__BERGAMOT_API_URL__?.replace(/\/api\/v1$/, "") || DEFAULT_SERVER;
+}
+
+export function setServerUrl(url: string) {
+  const clean = url.replace(/\/+$/, ""); // strip trailing slashes
+  localStorage.setItem(SERVER_URL_KEY, clean);
+  // Reload to re-initialize all connections with the new URL
+  window.location.reload();
+}
+
+export function getConfiguredServerUrl(): string {
+  return getServerUrl();
+}
+
+function getBaseUrl(): string {
+  return `${getServerUrl()}/api/v1`;
+}
+
+function getRootUrl(): string {
+  return getServerUrl();
+}
 
 let accessToken: string | null = localStorage.getItem('bergamot_token');
 
@@ -80,7 +104,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
+  const res = await fetch(`${getBaseUrl()}${path}`, { ...options, headers });
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
@@ -94,7 +118,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
 export async function login(username: string, password: string): Promise<Token> {
   const body = new URLSearchParams({ username, password });
-  const res = await fetch(`${BASE_URL}/auth/login`, {
+  const res = await fetch(`${getBaseUrl()}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body,
@@ -168,7 +192,7 @@ export async function listMessages(channelId: string, limit = 50): Promise<Messa
     if (msg.attachments) {
       for (const att of msg.attachments) {
         if (att.url && att.url.startsWith("/")) {
-          att.url = `${ROOT_URL}${att.url}`;
+          att.url = `${getRootUrl()}${att.url}`;
         }
       }
     }
@@ -193,7 +217,7 @@ export async function deleteMessage(channelId: string, messageId: string): Promi
   const headers: Record<string, string> = {};
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const res = await fetch(`${BASE_URL}/channels/${channelId}/messages/${messageId}`, {
+  const res = await fetch(`${getBaseUrl()}/channels/${channelId}/messages/${messageId}`, {
     method: "DELETE",
     headers,
   });
@@ -276,7 +300,7 @@ export async function deleteRole(serverId: string, roleId: string): Promise<void
   const headers: Record<string, string> = {};
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const res = await fetch(`${BASE_URL}/servers/${serverId}/roles/${roleId}`, {
+  const res = await fetch(`${getBaseUrl()}/servers/${serverId}/roles/${roleId}`, {
     method: "DELETE",
     headers,
   });
@@ -291,7 +315,7 @@ export async function assignRole(serverId: string, roleId: string, memberId: str
   const headers: Record<string, string> = {};
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const res = await fetch(`${BASE_URL}/servers/${serverId}/roles/${roleId}/members/${memberId}`, {
+  const res = await fetch(`${getBaseUrl()}/servers/${serverId}/roles/${roleId}/members/${memberId}`, {
     method: "PUT",
     headers,
   });
@@ -306,7 +330,7 @@ export async function removeRole(serverId: string, roleId: string, memberId: str
   const headers: Record<string, string> = {};
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const res = await fetch(`${BASE_URL}/servers/${serverId}/roles/${roleId}/members/${memberId}`, {
+  const res = await fetch(`${getBaseUrl()}/servers/${serverId}/roles/${roleId}/members/${memberId}`, {
     method: "DELETE",
     headers,
   });
@@ -330,7 +354,7 @@ export async function deleteChannel(serverId: string, channelId: string): Promis
   const headers: Record<string, string> = {};
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const res = await fetch(`${BASE_URL}/servers/${serverId}/channels/${channelId}`, {
+  const res = await fetch(`${getBaseUrl()}/servers/${serverId}/channels/${channelId}`, {
     method: "DELETE",
     headers,
   });
@@ -347,7 +371,7 @@ export async function uploadFile(file: File): Promise<AttachmentRead> {
   const formData = new FormData();
   formData.append("file", file);
 
-  const res = await fetch(`${BASE_URL}/uploads/`, {
+  const res = await fetch(`${getBaseUrl()}/uploads/`, {
     method: "POST",
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: formData,
@@ -361,7 +385,7 @@ export async function uploadFile(file: File): Promise<AttachmentRead> {
   const data: AttachmentRead = await res.json();
   // Convert relative URL to absolute URL
   if (data.url.startsWith("/")) {
-    data.url = `${ROOT_URL}${data.url}`;
+    data.url = `${getRootUrl()}${data.url}`;
   }
   return data;
 }

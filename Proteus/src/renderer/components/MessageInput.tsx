@@ -1,11 +1,13 @@
 import React, { useState, useCallback, useRef } from "react";
 import { Input, Toast } from "@douyinfe/semi-ui";
-import { IconSend, IconImage } from "@douyinfe/semi-icons";
+import { PhIcon } from "./PhIcon";
 import { sendMessage, sendTyping } from "../services/socket";
 import { uploadFile, createMessage } from "../services/api";
 import type { MessagePayload, AttachmentPayload } from "../services/socket";
 
 const MAX_FILE_SIZE_MB = 10;
+
+const TYPING_THROTTLE_MS = 2500;
 
 interface Props {
   channelId: string;
@@ -17,6 +19,8 @@ interface Props {
   /** When true, Hermes WebSocket is connected for real-time delivery */
   wsConnected?: boolean;
   senderId?: string;
+  /** Display name to send with typing events */
+  senderName?: string;
 }
 
 export const MessageInput: React.FC<Props> = ({
@@ -26,12 +30,13 @@ export const MessageInput: React.FC<Props> = ({
   mockMode = false,
   wsConnected = false,
   senderId = "local",
+  senderName,
 }) => {
   const [value, setValue] = useState("");
   const [sending, setSending] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [pendingPreviews, setPendingPreviews] = useState<string[]>([]);
-  const typingTimeout = useRef<ReturnType<typeof setTimeout>>();
+  const lastTypingSent = useRef<number>(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const addFiles = useCallback((files: FileList | File[]) => {
@@ -70,14 +75,16 @@ export const MessageInput: React.FC<Props> = ({
     (val: string) => {
       setValue(val);
 
-      if (wsConnected) {
-        if (typingTimeout.current) clearTimeout(typingTimeout.current);
-        typingTimeout.current = setTimeout(() => {
-          sendTyping(channelId);
-        }, 300);
+      // Throttle typing events: fire immediately, then suppress for TYPING_THROTTLE_MS
+      if (wsConnected && val.length > 0) {
+        const now = Date.now();
+        if (now - lastTypingSent.current >= TYPING_THROTTLE_MS) {
+          lastTypingSent.current = now;
+          sendTyping(channelId, senderName);
+        }
       }
     },
-    [channelId, mockMode]
+    [channelId, wsConnected, senderName]
   );
 
   const handleSend = useCallback(async () => {
@@ -256,13 +263,16 @@ export const MessageInput: React.FC<Props> = ({
         onPaste={handlePaste as any}
         placeholder={`Message #${channelName}`}
         prefix={
-          <IconImage
+          <PhIcon
+            name="image"
             style={{ cursor: "pointer", color: "#b5bac1" }}
             onClick={() => fileInputRef.current?.click()}
           />
         }
         suffix={
-          <IconSend
+          <PhIcon
+            name="paper-plane-right"
+            weight="fill"
             style={{
               cursor: canSend ? "pointer" : "default",
               color: canSend ? "#6b9362" : "#5c5e66",

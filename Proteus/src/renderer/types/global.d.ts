@@ -31,5 +31,9 @@ interface Window {
       node: string;
       chrome: string;
     };
+    getAvailableThemes: () => Promise<string[]>;
+    getThemeCss: (filename: string) => Promise<string>;
+    getThemesPath: () => Promise<string>;
+    openThemesFolder: () => Promise<void>;
   };
 }

@@ -1,8 +1,9 @@
 import React, { useState, useRef, useCallback } from "react";
 import { Avatar, Button, Switch, Toast, Input } from "@douyinfe/semi-ui";
-import { IconClose, IconCamera } from "@douyinfe/semi-icons";
+import { PhIcon } from "./PhIcon";
 import type { UserRead, UserUpdate } from "../services/api";
 import * as api from "../services/api";
+import { getConfiguredServerUrl, setServerUrl } from "../services/api";
 
 // ── Settings navigation structure ──
 
@@ -25,6 +26,7 @@ const SECTIONS: SettingsSection[] = [
     label: "App Settings",
     items: [
       { key: "appearance", label: "Appearance" },
+      { key: "connection", label: "Connection" },
       { key: "notifications", label: "Notifications" },
       { key: "keybinds", label: "Keybinds" },
       { key: "language", label: "Language" },
@@ -85,7 +87,7 @@ export const SettingsPanel: React.FC<Props> = ({ currentUser, onClose, onLogout,
             {SECTIONS.flatMap((s) => s.items).find((i) => i.key === activeKey)?.label}
           </h2>
           <div className="settings-content__close" onClick={onClose}>
-            <IconClose size="large" />
+            <PhIcon name="x" size={24} />
             <span className="settings-content__close-label">ESC</span>
           </div>
         </div>
@@ -98,6 +100,7 @@ export const SettingsPanel: React.FC<Props> = ({ currentUser, onClose, onLogout,
             <ProfileSettings currentUser={currentUser} onUserUpdated={onUserUpdated} />
           )}
           {activeKey === "appearance" && <AppearanceSettings />}
+          {activeKey === "connection" && <ConnectionSettings />}
           {activeKey === "notifications" && <NotificationSettings />}
           {activeKey === "privacy" && <PlaceholderPane title="Privacy & Safety" />}
           {activeKey === "connections" && <ConnectionsPane />}
@@ -111,11 +114,9 @@ export const SettingsPanel: React.FC<Props> = ({ currentUser, onClose, onLogout,
 
 // ── Sub-panes ──
 
-const ROOT_URL = ((window as any).__BERGAMOT_API_URL__ || "http://localhost:8000/api/v1").replace(/\/api\/v1$/, "");
-
 function resolveUrl(url: string | null): string | null {
   if (!url) return null;
-  return url.startsWith("/") ? `${ROOT_URL}${url}` : url;
+  return url.startsWith("/") ? `${getConfiguredServerUrl()}${url}` : url;
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
@@ -214,7 +215,7 @@ const ProfileSettings: React.FC<{ currentUser: UserRead; onUserUpdated?: (user: 
       // Show local preview
       setAvatarPreview(URL.createObjectURL(file));
       const att = await api.uploadFile(file);
-      const updated = await api.updateProfile({ avatar_url: att.url.replace(ROOT_URL, "") });
+      const updated = await api.updateProfile({ avatar_url: att.url.replace(getConfiguredServerUrl(), "") });
       if (onUserUpdated) onUserUpdated(updated);
       Toast.success({ content: "Avatar updated", duration: 1.5 });
     } catch (err: any) {
@@ -229,7 +230,7 @@ const ProfileSettings: React.FC<{ currentUser: UserRead; onUserUpdated?: (user: 
     try {
       setBannerPreview(URL.createObjectURL(file));
       const att = await api.uploadFile(file);
-      const updated = await api.updateProfile({ banner_url: att.url.replace(ROOT_URL, "") });
+      const updated = await api.updateProfile({ banner_url: att.url.replace(getConfiguredServerUrl(), "") });
       if (onUserUpdated) onUserUpdated(updated);
       Toast.success({ content: "Banner updated", duration: 1.5 });
     } catch (err: any) {
@@ -306,7 +307,7 @@ const ProfileSettings: React.FC<{ currentUser: UserRead; onUserUpdated?: (user: 
         >
           <div className="profile-banner__overlay">
             <Button
-              icon={<IconCamera />}
+              icon={<PhIcon name="camera" />}
               theme="borderless"
               style={{ color: "#fff", background: "rgba(0,0,0,0.5)", borderRadius: 20 }}
               onClick={() => bannerInputRef.current?.click()}
@@ -336,7 +337,7 @@ const ProfileSettings: React.FC<{ currentUser: UserRead; onUserUpdated?: (user: 
               </Avatar>
             )}
             <div className="profile-avatar-wrapper__overlay">
-              <IconCamera style={{ fontSize: 20 }} />
+              <PhIcon name="camera" size={20} />
             </div>
           </div>
           <div className="profile-avatar-actions">
@@ -433,31 +434,260 @@ const ProfileSettings: React.FC<{ currentUser: UserRead; onUserUpdated?: (user: 
   );
 };
 
-const AppearanceSettings: React.FC = () => (
-  <div>
-    <div className="settings-card" style={{ padding: 24 }}>
-      <h3 style={{ color: "#e0e1e5", marginBottom: 16 }}>Theme</h3>
-      <div style={{ display: "flex", gap: 12 }}>
-        {["Dark", "Light"].map((t) => (
-          <div
-            key={t}
-            style={{
-              padding: "12px 24px",
-              borderRadius: 8,
-              background: t === "Dark" ? "#1e1f22" : "#f2f3f5",
-              color: t === "Dark" ? "#e0e1e5" : "#2e3338",
-              border: t === "Dark" ? "2px solid #6b9362" : "2px solid transparent",
-              cursor: "pointer",
-              fontWeight: 600,
-            }}
-          >
-            {t}
-          </div>
-        ))}
+/** Inject or remove custom theme CSS in the document head. */
+function applyThemeCss(css: string | null) {
+  const id = "bergamot-custom-theme";
+  let el = document.getElementById(id) as HTMLStyleElement | null;
+  if (!css) {
+    el?.remove();
+    return;
+  }
+  if (!el) {
+    el = document.createElement("style");
+    el.id = id;
+    document.head.appendChild(el);
+  }
+  el.textContent = css;
+}
+
+const THEME_NAME_KEY = "bergamot_selected_theme";
+const THEME_CSS_KEY = "bergamot_theme_css";
+const BASE_THEME_KEY = "bergamot_base_theme";
+
+type BaseTheme = "dark" | "light";
+
+/** Apply a base theme class to <html> and <body> for BD theme `:is(.theme-dark, ...)` selectors. */
+function applyBaseTheme(theme: BaseTheme) {
+  const classes = ["theme-dark", "theme-light"];
+  const root = document.documentElement;
+  const body = document.body;
+  classes.forEach((c) => {
+    root.classList.remove(c);
+    body.classList.remove(c);
+  });
+  root.classList.add(`theme-${theme}`);
+  body.classList.add(`theme-${theme}`);
+  localStorage.setItem(BASE_THEME_KEY, theme);
+}
+
+function getBaseTheme(): BaseTheme {
+  return (localStorage.getItem(BASE_THEME_KEY) as BaseTheme) || "dark";
+}
+
+/** Whether the Electron preload bridge is available (false in pure browser dev). */
+const hasBridge = typeof window.bergamot?.getAvailableThemes === "function";
+
+const AppearanceSettings: React.FC = () => {
+  const [themes, setThemes] = useState<string[]>([]);
+  const [activeTheme, setActiveTheme] = useState<string | null>(
+    localStorage.getItem(THEME_NAME_KEY)
+  );
+  const [baseTheme, setBaseThemeState] = useState<BaseTheme>(getBaseTheme);
+  const [loading, setLoading] = useState(true);
+  const [themesPath, setThemesPath] = useState(hasBridge ? "Loading path..." : "Not available outside Electron");
+
+  // Apply base theme class on mount & when changed
+  React.useEffect(() => {
+    applyBaseTheme(baseTheme);
+  }, [baseTheme]);
+
+  const handleBaseTheme = useCallback((t: BaseTheme) => {
+    setBaseThemeState(t);
+    applyBaseTheme(t);
+  }, []);
+
+  const fetchThemes = useCallback(async () => {
+    if (!hasBridge) { setLoading(false); return; }
+    setLoading(true);
+    try {
+      const list = await window.bergamot.getAvailableThemes();
+      setThemes(list);
+    } catch {
+      setThemes([]);
+    }
+    setLoading(false);
+  }, []);
+
+  React.useEffect(() => {
+    fetchThemes();
+    if (hasBridge) {
+      window.bergamot.getThemesPath().then(setThemesPath).catch(() => {});
+    }
+  }, [fetchThemes]);
+
+  const selectTheme = useCallback(async (filename: string | null) => {
+    if (!filename) {
+      applyThemeCss(null);
+      localStorage.removeItem(THEME_NAME_KEY);
+      localStorage.removeItem(THEME_CSS_KEY);
+      setActiveTheme(null);
+      return;
+    }
+    if (!hasBridge) return;
+    try {
+      const css = await window.bergamot.getThemeCss(filename);
+      applyThemeCss(css);
+      localStorage.setItem(THEME_NAME_KEY, filename);
+      localStorage.setItem(THEME_CSS_KEY, css);
+      setActiveTheme(filename);
+    } catch (err: any) {
+      Toast.error({ content: err.message || "Failed to load theme", duration: 2 });
+    }
+  }, []);
+
+  const handleSelectChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    selectTheme(value === "" ? null : value);
+  }, [selectTheme]);
+
+  return (
+    <div>
+      {/* Base theme selector */}
+      <div className="settings-card" style={{ padding: 24 }}>
+        <h3 style={{ color: "var(--header-primary)", marginBottom: 16 }}>Base Theme</h3>
+        <div style={{ display: "flex", gap: 12 }}>
+          {(["dark", "light"] as const).map((t) => (
+            <div
+              key={t}
+              className={`base-theme-btn ${baseTheme === t ? "base-theme-btn--active" : ""} base-theme-btn--${t}`}
+              onClick={() => handleBaseTheme(t)}
+            >
+              <PhIcon name={t === "dark" ? "moon" : "sun"} weight="fill" size={16} style={{ marginRight: 8 }} />
+              {t === "dark" ? "Dark" : "Light"}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* BetterDiscord theme selector */}
+      <div className="settings-card" style={{ padding: 24 }}>
+        <h3 style={{ color: "var(--header-primary)", marginBottom: 16 }}>BetterDiscord Themes</h3>
+
+        {!hasBridge ? (
+          <p style={{ color: "var(--text-muted)", fontSize: 13 }}>
+            Custom BetterDiscord themes are only available in the Bergamot desktop app.
+          </p>
+        ) : (
+          <>
+            <div className="settings-card__label" style={{ marginBottom: 8 }}>Select Theme</div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 16 }}>
+              <select
+                className="theme-select"
+                value={activeTheme || ""}
+                onChange={handleSelectChange}
+                disabled={loading}
+              >
+                <option value="">Default (None)</option>
+                {themes.map((filename) => (
+                  <option key={filename} value={filename}>
+                    {filename.replace(/\.css$/, "")}
+                  </option>
+                ))}
+              </select>
+              <Button size="small" theme="borderless" style={{ color: "var(--text-normal)" }} onClick={fetchThemes}>
+                Refresh
+              </Button>
+            </div>
+
+            {themes.length === 0 && !loading && (
+              <p style={{ color: "var(--text-muted)", fontSize: 13, marginBottom: 12 }}>
+                No themes found. Place <code>.css</code> files in your themes folder to get started.
+              </p>
+            )}
+
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+              <Button
+                size="small"
+                style={{ background: "var(--brand-experiment)", borderColor: "var(--brand-experiment)", color: "#fff" }}
+                onClick={() => window.bergamot.openThemesFolder()}
+              >
+                Open Themes Folder
+              </Button>
+            </div>
+
+            <p style={{ color: "var(--interactive-muted)", fontSize: 12, marginTop: 12 }}>
+              Themes directory: <code style={{ color: "var(--text-muted)" }}>{themesPath}</code>
+            </p>
+          </>
+        )}
       </div>
     </div>
-  </div>
-);
+  );
+};
+
+const ConnectionSettings: React.FC = () => {
+  const [serverUrl, setUrl] = useState(getConfiguredServerUrl());
+  const [saved, setSaved] = useState(true);
+
+  const currentUrl = getConfiguredServerUrl();
+  const isDirty = serverUrl.replace(/\/+$/, "") !== currentUrl;
+
+  const handleSave = useCallback(() => {
+    const cleaned = serverUrl.replace(/\/+$/, "").trim();
+    if (!cleaned) {
+      Toast.error({ content: "Server URL cannot be empty", duration: 2 });
+      return;
+    }
+    try {
+      new URL(cleaned); // validate
+    } catch {
+      Toast.error({ content: "Invalid URL format", duration: 2 });
+      return;
+    }
+    setSaved(true);
+    Toast.info({ content: "Reconnecting to new server…", duration: 2 });
+    // setServerUrl triggers a page reload
+    setTimeout(() => setServerUrl(cleaned), 300);
+  }, [serverUrl]);
+
+  const handleReset = useCallback(() => {
+    localStorage.removeItem("bergamot_server_url");
+    Toast.info({ content: "Reset to default. Reloading…", duration: 2 });
+    setTimeout(() => window.location.reload(), 300);
+  }, []);
+
+  return (
+    <div>
+      <div className="settings-card" style={{ padding: 24 }}>
+        <h3 style={{ color: "#e0e1e5", marginBottom: 8 }}>Server Connection</h3>
+        <p style={{ color: "#80848e", fontSize: 13, marginBottom: 16 }}>
+          Configure which Bergamot backend server to connect to. The app will reload after changing.
+        </p>
+
+        <div className="settings-card__label" style={{ marginBottom: 8 }}>Server URL</div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <Input
+            value={serverUrl}
+            onChange={(v) => { setUrl(v); setSaved(false); }}
+            placeholder="http://localhost:8000"
+            style={{ flex: 1, backgroundColor: "#1e1f22", borderColor: "#3f4147", color: "#e0e1e5" }}
+            onKeyDown={(e) => e.key === "Enter" && isDirty && handleSave()}
+          />
+          <Button
+            size="small"
+            style={isDirty ? { background: "#6b9362", borderColor: "#6b9362", color: "#fff" } : {}}
+            disabled={!isDirty}
+            onClick={handleSave}
+          >
+            Save
+          </Button>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 16 }}>
+          <Button size="small" theme="borderless" style={{ color: "#b5bac1" }} onClick={handleReset}>
+            Reset to Default (localhost:8000)
+          </Button>
+        </div>
+
+        <p style={{ color: "#5c5e66", fontSize: 12, marginTop: 16 }}>
+          API endpoint: <code style={{ color: "#80848e" }}>{currentUrl}/api/v1</code>
+          <br />
+          WebSocket: <code style={{ color: "#80848e" }}>ws://{(() => { try { return new URL(currentUrl).hostname; } catch { return "localhost"; } })()}:4000/socket</code>
+        </p>
+      </div>
+    </div>
+  );
+};
 
 const NotificationSettings: React.FC = () => (
   <div>

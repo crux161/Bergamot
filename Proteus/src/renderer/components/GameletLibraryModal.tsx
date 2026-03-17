@@ -32,8 +32,7 @@ export const GameletLibraryModal: React.FC<Props> = ({ visible, onClose, onSelec
   useEffect(() => {
     if (!visible) return;
     setLoading(true);
-    window.bergamot
-      .listGames()
+    (window.bergamot?.listGames() ?? Promise.resolve([]))
       .then((entries) => setGames(entries))
       .catch((err) => console.error("[GameletLibrary] Failed to list games:", err))
       .finally(() => setLoading(false));

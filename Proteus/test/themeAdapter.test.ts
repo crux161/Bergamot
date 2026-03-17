@@ -5,6 +5,7 @@ import path from "node:path";
 
 import {
   buildCompiledThemeCss,
+  compileThemeContract,
   compileThemeTokens,
   extractThemeVariables,
 } from "../src/renderer/theme/themeAdapter";
@@ -23,6 +24,15 @@ test("default theme provides a complete dark token contract", async () => {
   assert.equal(tokens["bg-2"], "#313338");
   assert.equal(tokens["accent"], "#6b9362");
   assert.equal(tokens["status-danger"], "#f23f43");
+});
+
+test("default theme provides semantic UI tokens", async () => {
+  const defaultCss = await loadThemeFile("ProteusDefault.theme.css");
+  const contract = compileThemeContract(defaultCss, null, "dark");
+
+  assert.equal(contract.ui["radius-card"], "28px");
+  assert.equal(contract.ui["radius-control"], "18px");
+  assert.equal(contract.ui["density-scale"], "1");
 });
 
 test("DarkMatter variables override the Proteus dark baseline", async () => {
@@ -100,6 +110,35 @@ test("CreArts import-only theme falls back to the built-in family palette", asyn
   assert.equal(tokens["selected"], "rgba(88, 101, 242, 0.18)");
 });
 
+test("Proteus Douyin dark mode exposes bundled palette and UI semantics", async () => {
+  const [defaultCss, douyinCss] = await Promise.all([
+    loadThemeFile("ProteusDefault.theme.css"),
+    loadThemeFile("ProteusDouyin.theme.css"),
+  ]);
+
+  const contract = compileThemeContract(defaultCss, douyinCss, "dark");
+
+  assert.equal(contract.colors["bg-0"], "#050505");
+  assert.equal(contract.colors["accent"], "#fe2c55");
+  assert.equal(contract.colors["link"], "#25f4ee");
+  assert.equal(contract.ui["radius-card"], "12px");
+  assert.equal(contract.ui["density-scale"], "0.92");
+});
+
+test("Proteus Douyin light mode resolves the bundled light palette", async () => {
+  const [defaultCss, douyinCss] = await Promise.all([
+    loadThemeFile("ProteusDefault.theme.css"),
+    loadThemeFile("ProteusDouyin.theme.css"),
+  ]);
+
+  const tokens = compileThemeTokens(defaultCss, douyinCss, "light");
+
+  assert.equal(tokens["bg-2"], "#ffffff");
+  assert.equal(tokens["bg-0"], "#f1f1f1");
+  assert.equal(tokens["text-0"], "#1c1c1c");
+  assert.equal(tokens["accent"], "#fe2c55");
+});
+
 test("variable extraction resolves nested var() references", () => {
   const css = `
     :root {
@@ -134,4 +173,21 @@ test("compiled CSS emits Proteus runtime variables", async () => {
   assert.match(compiledCss, /--proteus-accent:\s*rgb\(103,58,183\);/);
   assert.match(compiledCss, /--proteus-link:\s*#00b0f4;/);
   assert.match(compiledCss, /--proteus-scrollbar-thumb:\s*rgba\(255,255,255,0\.05\);/);
+});
+
+test("compiled CSS includes Proteus UI semantic variables", async () => {
+  const [defaultCss, douyinCss] = await Promise.all([
+    loadThemeFile("ProteusDefault.theme.css"),
+    loadThemeFile("ProteusDouyin.theme.css"),
+  ]);
+
+  const compiledCss = buildCompiledThemeCss({
+    baseTheme: "dark",
+    defaultCss,
+    customCss: douyinCss,
+  });
+
+  assert.match(compiledCss, /--proteus-ui-radius-card:\s*12px;/);
+  assert.match(compiledCss, /--proteus-ui-density-scale:\s*0\.92;/);
+  assert.match(compiledCss, /--proteus-ui-sidebar-width:\s*280px;/);
 });

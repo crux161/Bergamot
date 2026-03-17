@@ -31,7 +31,7 @@ declare class Go {
 }
 
 interface Window {
-  bergamot: {
+  bergamot?: {
     platform: string;
     versions: {
       electron: string;

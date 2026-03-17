@@ -13,11 +13,14 @@
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
     "package": "npm run build && electron-forge package",
-    "make": "npm run build && electron-forge make"
+    "make": "npm run build && electron-forge make",
+    "dev:web": "node scripts/build-web-manifests.js && vite --config vite.config.web.ts",
+    "build:web": "node scripts/build-web-manifests.js && vite build --config vite.config.web.ts"
   },
   "dependencies": {
     "@douyinfe/semi-icons": "^2.71",
     "@douyinfe/semi-ui": "^2.71",
+    "@fontsource/dm-sans": "^5.2.8",
     "electron-squirrel-startup": "^1.0.1",
     "phoenix": "^1.7",
     "react": "^18.3",
@@ -34,6 +37,7 @@
     "@electron/fuses": "^1.8.0",
     "@types/react": "^18.3",
     "@types/react-dom": "^18.3",
+    "@vitejs/plugin-react": "^6.0.1",
     "concurrently": "^9.0",
     "copy-webpack-plugin": "^14.0.0",
     "css-loader": "^7.1",
@@ -45,6 +49,7 @@
     "style-loader": "^4.0",
     "ts-loader": "^9.5",
     "typescript": "^5.5",
+    "vite": "^8.0.0",
     "webpack": "^5.95",
     "webpack-cli": "^5.1",
     "webpack-dev-server": "^5.1"

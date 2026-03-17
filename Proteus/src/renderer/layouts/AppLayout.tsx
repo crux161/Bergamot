@@ -83,6 +83,15 @@ const MOCK_DM_MESSAGES: Record<string, MessagePayload[]> = {
 // All permissions (used for mock mode / server owner)
 const ALL_PERMS = 0xFF;
 
+type LayoutMode = "desktop" | "wide-tablet" | "tablet" | "compact";
+
+function resolveLayoutMode(width: number): LayoutMode {
+  if (width >= 1440) return "desktop";
+  if (width >= 1100) return "wide-tablet";
+  if (width >= 820) return "tablet";
+  return "compact";
+}
+
 interface Props {
   currentUser: api.UserRead;
   onLogout?: () => void;
@@ -117,6 +126,30 @@ export const AppLayout: React.FC<Props> = ({ currentUser, onLogout, onUserUpdate
 
   // ── Call state ──
   const [callState, setCallState] = useState<CallState | null>(null);
+  const [layoutMode, setLayoutMode] = useState<LayoutMode>(() =>
+    typeof window === "undefined" ? "desktop" : resolveLayoutMode(window.innerWidth),
+  );
+  const [navDrawerOpen, setNavDrawerOpen] = useState(false);
+  const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setLayoutMode(resolveLayoutMode(window.innerWidth));
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    if (layoutMode === "desktop") {
+      setNavDrawerOpen(false);
+      setDetailDrawerOpen(false);
+    } else if (layoutMode === "wide-tablet") {
+      setNavDrawerOpen(false);
+    }
+  }, [layoutMode]);
 
   // Connect to Hermes on mount (graceful fallback)
   useEffect(() => {
@@ -353,6 +386,7 @@ export const AppLayout: React.FC<Props> = ({ currentUser, onLogout, onUserUpdate
     setDmMode(true);
     setActiveChannelId(null);
     setMessages([]);
+    setNavDrawerOpen(false);
     // Select first DM if none selected
     if (!activeDmId && dmConversations.length > 0) {
       setActiveDmId(dmConversations[0].id);
@@ -363,11 +397,34 @@ export const AppLayout: React.FC<Props> = ({ currentUser, onLogout, onUserUpdate
     setDmMode(false);
     setActiveDmId(null);
     setActiveServerId(serverId);
+    setNavDrawerOpen(false);
   }, []);
 
   const handleSelectDm = useCallback((dmId: string) => {
     setActiveDmId(dmId);
     setMessages(MOCK_DM_MESSAGES[dmId] || []);
+    setNavDrawerOpen(false);
+  }, []);
+
+  const handleSelectChannel = useCallback((channelId: string) => {
+    setActiveChannelId(channelId);
+    setNavDrawerOpen(false);
+  }, []);
+
+  const handleOpenSettings = useCallback(() => {
+    setShowSettings(true);
+    setNavDrawerOpen(false);
+    setDetailDrawerOpen(false);
+  }, []);
+
+  const handleOpenServerSettings = useCallback(() => {
+    setShowServerSettings(true);
+    setNavDrawerOpen(false);
+  }, []);
+
+  const handleCloseShellDrawers = useCallback(() => {
+    setNavDrawerOpen(false);
+    setDetailDrawerOpen(false);
   }, []);
 
   // ── Call handlers ──
@@ -424,147 +481,171 @@ export const AppLayout: React.FC<Props> = ({ currentUser, onLogout, onUserUpdate
   const chatChannelTopic = dmMode ? null : activeChannel?.topic;
 
   const showChat = dmMode ? !!activeDmId : !!activeChannel;
+  const shouldUseNavDrawer = layoutMode === "tablet" || layoutMode === "compact";
+  const shouldUseDetailDrawer = layoutMode !== "desktop";
+
+  const channelSidebar = dmMode ? (
+    <ChannelList
+      serverName="Direct Messages"
+      serverId=""
+      channels={[]}
+      activeChannelId={null}
+      currentUser={currentUser}
+      onSelect={() => {}}
+      onOpenSettings={handleOpenSettings}
+      dmMode
+      dmConversations={dmConversations}
+      activeDmId={activeDmId}
+      onSelectDm={handleSelectDm}
+      onNewDm={() => Toast.info({ content: "New DM coming soon!", duration: 2 })}
+      voiceConnected={!!callState}
+      voiceChannelName={callState ? `Call — ${callState.peerName}` : undefined}
+      onDisconnectVoice={handleEndCall}
+    />
+  ) : activeServer ? (
+    <ChannelList
+      serverName={activeServer.name}
+      serverId={activeServer.id}
+      channels={channels}
+      activeChannelId={activeChannelId}
+      currentUser={currentUser}
+      onSelect={handleSelectChannel}
+      onAddChannel={() => setShowAddChannel(true)}
+      onOpenSettings={handleOpenSettings}
+      onOpenServerSettings={handleOpenServerSettings}
+      onDeleteChannel={handleDeleteChannel}
+      canManageChannels={canManageChannels}
+      canOpenServerSettings={canOpenServerSettings}
+    />
+  ) : null;
+
+  const detailPanel = dmMode ? (
+    activeDm ? (
+      <div className="dm-profile-sidebar">
+        <div className="dm-profile-sidebar__header">
+          <div className="dm-profile-sidebar__avatar-wrap">
+            {activeDm.avatarUrl ? (
+              <img className="dm-profile-sidebar__avatar" src={activeDm.avatarUrl} alt="" />
+            ) : (
+              <div className="dm-profile-sidebar__avatar dm-profile-sidebar__avatar--fallback">
+                {activeDm.displayName[0].toUpperCase()}
+              </div>
+            )}
+            <span className={`dm-profile-sidebar__status dm-profile-sidebar__status--${activeDm.status}`} />
+          </div>
+          <div className="dm-profile-sidebar__name">{activeDm.displayName}</div>
+          <div className="dm-profile-sidebar__username">{activeDm.username}</div>
+        </div>
+        <div className="dm-profile-sidebar__section">
+          <div className="dm-profile-sidebar__section-title">Member Since</div>
+          <div className="dm-profile-sidebar__section-content">Jan 1, 2025</div>
+        </div>
+        <div className="dm-profile-sidebar__section">
+          <div className="dm-profile-sidebar__section-title">Note</div>
+          <input
+            className="dm-profile-sidebar__note-input"
+            placeholder="Click to add a note"
+          />
+        </div>
+      </div>
+    ) : null
+  ) : activeServer ? (
+    <MemberList members={members} />
+  ) : null;
+
+  const showDetailToggle = shouldUseDetailDrawer && !!detailPanel;
+  const isDrawerActive = (shouldUseNavDrawer && navDrawerOpen) || (showDetailToggle && detailDrawerOpen);
 
   return (
-    <div className="app-layout">
+    <div className="app-layout" data-layout-mode={layoutMode}>
       <div className="titlebar-drag" />
+      {isDrawerActive && <div className="app-layout__scrim" onClick={handleCloseShellDrawers} />}
 
-      <ServerList
-        servers={servers}
-        activeServerId={activeServerId}
-        dmMode={dmMode}
-        onSelect={handleSelectServer}
-        onAdd={() => setShowAddServer(true)}
-        onDmHome={handleDmHome}
-      />
-
-      {dmMode ? (
-        <ChannelList
-          serverName="Direct Messages"
-          serverId=""
-          channels={[]}
-          activeChannelId={null}
-          currentUser={currentUser}
-          onSelect={() => {}}
-          onOpenSettings={() => setShowSettings(true)}
-          dmMode
-          dmConversations={dmConversations}
-          activeDmId={activeDmId}
-          onSelectDm={handleSelectDm}
-          onNewDm={() => Toast.info({ content: "New DM coming soon!", duration: 2 })}
-          voiceConnected={!!callState}
-          voiceChannelName={callState ? `Call — ${callState.peerName}` : undefined}
-          onDisconnectVoice={handleEndCall}
+      <div
+        className={`app-layout__primary-nav ${shouldUseNavDrawer ? "app-layout__primary-nav--drawer" : ""} ${navDrawerOpen ? "app-layout__primary-nav--open" : ""}`}
+      >
+        <ServerList
+          servers={servers}
+          activeServerId={activeServerId}
+          dmMode={dmMode}
+          onSelect={handleSelectServer}
+          onAdd={() => setShowAddServer(true)}
+          onDmHome={handleDmHome}
         />
-      ) : activeServer ? (
-        <ChannelList
-          serverName={activeServer.name}
-          serverId={activeServer.id}
-          channels={channels}
-          activeChannelId={activeChannelId}
-          currentUser={currentUser}
-          onSelect={setActiveChannelId}
-          onAddChannel={() => setShowAddChannel(true)}
-          onOpenSettings={() => setShowSettings(true)}
-          onOpenServerSettings={() => setShowServerSettings(true)}
-          onDeleteChannel={handleDeleteChannel}
-          canManageChannels={canManageChannels}
-          canOpenServerSettings={canOpenServerSettings}
-        />
-      ) : null}
-
-      <div className="chat-area">
-        {showChat ? (
-          <>
-            <ChatView
-              channelName={chatChannelName}
-              channelTopic={chatChannelTopic}
-              messages={messages}
-              userMap={userMap}
-              currentUserId={currentUser.id}
-              onDeleteMessage={handleDeleteMessage}
-              canManageMessages={canManageMessages}
-              isDm={dmMode}
-              onVoiceCall={() => handleStartCall("voice")}
-              onVideoCall={() => handleStartCall("video")}
-            />
-            <TypingIndicator typingUsers={typingUsers} />
-            <MessageInput
-              channelId={dmMode ? (activeDmId || "") : (activeChannel?.id || "")}
-              channelName={chatChannelName}
-              onMessageSent={handleMessageSent}
-              mockMode={usingMockData || dmMode}
-              wsConnected={hermesConnected}
-              senderId={currentUser.id}
-              senderName={currentUser.display_name || currentUser.username}
-              onOpenGamelets={() => setShowGameletLibrary(true)}
-            />
-          </>
-        ) : (
-          <div className="chat-area__empty">
-            {dmMode
-              ? "Select a conversation"
-              : servers.length === 0
-                ? "Create a server to get started"
-                : "Select a channel"}
-          </div>
-        )}
-
-        {/* Gamelet overlay — positioned absolutely so it doesn't disturb flex layout.
-            Unmounting restores the chat area to its exact prior state. */}
-        {activeGamelet && (
-          <GameletPlayer
-            gameName={activeGamelet.name}
-            gameUrl={activeGamelet.url}
-            type={activeGamelet.type}
-            gamepadMapping={activeGamelet.gamepadMapping}
-            onLeave={() => setActiveGamelet(null)}
-          />
-        )}
-
-        {/* Call overlay — positioned absolutely over the chat area */}
-        {callState && (
-          <CallOverlay
-            call={callState}
-            onEnd={handleEndCall}
-          />
-        )}
+        {channelSidebar}
       </div>
 
-      {dmMode ? (
-        // In DM mode, show a user profile panel instead of member list
-        activeDm && (
-          <div className="dm-profile-sidebar">
-            <div className="dm-profile-sidebar__header">
-              <div className="dm-profile-sidebar__avatar-wrap">
-                {activeDm.avatarUrl ? (
-                  <img className="dm-profile-sidebar__avatar" src={activeDm.avatarUrl} alt="" />
-                ) : (
-                  <div className="dm-profile-sidebar__avatar dm-profile-sidebar__avatar--fallback">
-                    {activeDm.displayName[0].toUpperCase()}
-                  </div>
-                )}
-                <span className={`dm-profile-sidebar__status dm-profile-sidebar__status--${activeDm.status}`} />
-              </div>
-              <div className="dm-profile-sidebar__name">{activeDm.displayName}</div>
-              <div className="dm-profile-sidebar__username">{activeDm.username}</div>
-            </div>
-            <div className="dm-profile-sidebar__section">
-              <div className="dm-profile-sidebar__section-title">Member Since</div>
-              <div className="dm-profile-sidebar__section-content">Jan 1, 2025</div>
-            </div>
-            <div className="dm-profile-sidebar__section">
-              <div className="dm-profile-sidebar__section-title">Note</div>
-              <input
-                className="dm-profile-sidebar__note-input"
-                placeholder="Click to add a note"
+      <div className="app-layout__workspace">
+        <div className="chat-area">
+          {showChat ? (
+            <>
+              <ChatView
+                channelName={chatChannelName}
+                channelTopic={chatChannelTopic}
+                messages={messages}
+                userMap={userMap}
+                currentUserId={currentUser.id}
+                onDeleteMessage={handleDeleteMessage}
+                canManageMessages={canManageMessages}
+                isDm={dmMode}
+                onVoiceCall={() => handleStartCall("voice")}
+                onVideoCall={() => handleStartCall("video")}
+                showNavigationToggle={shouldUseNavDrawer}
+                onToggleNavigation={() => setNavDrawerOpen((prev) => !prev)}
+                showDetailsToggle={showDetailToggle}
+                onToggleDetails={() => setDetailDrawerOpen((prev) => !prev)}
               />
+              <TypingIndicator typingUsers={typingUsers} />
+              <MessageInput
+                channelId={dmMode ? (activeDmId || "") : (activeChannel?.id || "")}
+                channelName={chatChannelName}
+                onMessageSent={handleMessageSent}
+                mockMode={usingMockData || dmMode}
+                wsConnected={hermesConnected}
+                senderId={currentUser.id}
+                senderName={currentUser.display_name || currentUser.username}
+                onOpenGamelets={() => setShowGameletLibrary(true)}
+              />
+            </>
+          ) : (
+            <div className="chat-area__empty">
+              {dmMode
+                ? "Select a conversation"
+                : servers.length === 0
+                  ? "Create a server to get started"
+                  : "Select a channel"}
             </div>
-          </div>
-        )
-      ) : activeServer ? (
-        <MemberList members={members} />
-      ) : null}
+          )}
+
+          {/* Gamelet overlay — positioned absolutely so it doesn't disturb flex layout.
+              Unmounting restores the chat area to its exact prior state. */}
+          {activeGamelet && (
+            <GameletPlayer
+              gameName={activeGamelet.name}
+              gameUrl={activeGamelet.url}
+              type={activeGamelet.type}
+              gamepadMapping={activeGamelet.gamepadMapping}
+              onLeave={() => setActiveGamelet(null)}
+            />
+          )}
+
+          {/* Call overlay — positioned absolutely over the chat area */}
+          {callState && (
+            <CallOverlay
+              call={callState}
+              onEnd={handleEndCall}
+            />
+          )}
+        </div>
+      </div>
+
+      {detailPanel && (
+        <div
+          className={`app-layout__aux-panel ${showDetailToggle ? "app-layout__aux-panel--drawer" : ""} ${detailDrawerOpen ? "app-layout__aux-panel--open" : ""}`}
+        >
+          {detailPanel}
+        </div>
+      )}
 
       {/* Create Server Modal */}
       <Modal

@@ -31,8 +31,30 @@ export const PROTEUS_TOKEN_NAMES = [
   "mention-bg",
 ] as const;
 
+export const PROTEUS_UI_TOKEN_NAMES = [
+  "radius-card",
+  "radius-control",
+  "radius-pill",
+  "shadow-card",
+  "shadow-float",
+  "shell-gap",
+  "panel-gap",
+  "content-gap",
+  "header-height",
+  "sidebar-width",
+  "right-rail-width",
+  "density-scale",
+] as const;
+
 export type ProteusTokenName = (typeof PROTEUS_TOKEN_NAMES)[number];
 export type ProteusTokenRecord = Record<ProteusTokenName, string>;
+export type ProteusUiTokenName = (typeof PROTEUS_UI_TOKEN_NAMES)[number];
+export type ProteusUiTokenRecord = Record<ProteusUiTokenName, string>;
+
+export interface ProteusThemeContract {
+  colors: ProteusTokenRecord;
+  ui: ProteusUiTokenRecord;
+}
 
 interface CssBlock {
   selector: string;
@@ -412,6 +434,14 @@ function normalizeColor(value: string | undefined): string | undefined {
   return undefined;
 }
 
+function normalizeUiValue(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+
+  const trimmed = value.trim().replace(/\s*!important\s*$/i, "");
+  if (!trimmed || trimmed === "none") return undefined;
+  return trimmed;
+}
+
 function shade(color: string, percentage: number, toward: "black" | "white"): string {
   return `color-mix(in srgb, ${color} ${100 - percentage}%, ${toward} ${percentage}%)`;
 }
@@ -674,9 +704,23 @@ function mapBetterDiscordVariables(
   );
 }
 
-function renderCompiledCss(tokens: ProteusTokenRecord): string {
-  const lines = PROTEUS_TOKEN_NAMES.map((tokenName) => `  --proteus-${tokenName}: ${tokens[tokenName]};`);
-  return [":root {", ...lines, "}"].join("\n");
+function mapProteusUiVariables(
+  variables: Record<string, string>,
+): Partial<ProteusUiTokenRecord> {
+  const uiTokens: Partial<ProteusUiTokenRecord> = {};
+
+  for (const tokenName of PROTEUS_UI_TOKEN_NAMES) {
+    const direct = normalizeUiValue(variables[`--proteus-ui-${tokenName}`]);
+    if (direct) uiTokens[tokenName] = direct;
+  }
+
+  return uiTokens;
+}
+
+function renderCompiledCss(contract: ProteusThemeContract): string {
+  const colorLines = PROTEUS_TOKEN_NAMES.map((tokenName) => `  --proteus-${tokenName}: ${contract.colors[tokenName]};`);
+  const uiLines = PROTEUS_UI_TOKEN_NAMES.map((tokenName) => `  --proteus-ui-${tokenName}: ${contract.ui[tokenName]};`);
+  return [":root {", ...colorLines, ...uiLines, "}"].join("\n");
 }
 
 function ensureAllTokens(tokens: Partial<ProteusTokenRecord>): ProteusTokenRecord {
@@ -688,24 +732,53 @@ function ensureAllTokens(tokens: Partial<ProteusTokenRecord>): ProteusTokenRecor
   return tokens as ProteusTokenRecord;
 }
 
+function ensureAllUiTokens(tokens: Partial<ProteusUiTokenRecord>): ProteusUiTokenRecord {
+  const missingTokens = PROTEUS_UI_TOKEN_NAMES.filter((tokenName) => !tokens[tokenName]);
+  if (missingTokens.length > 0) {
+    throw new Error(`Missing Proteus UI theme tokens: ${missingTokens.join(", ")}`);
+  }
+
+  return tokens as ProteusUiTokenRecord;
+}
+
+export function compileThemeContract(
+  defaultCss: string,
+  customCss: string | null | undefined,
+  baseTheme: BaseTheme,
+): ProteusThemeContract {
+  const defaultVariables = extractResolvedVariables(defaultCss, baseTheme);
+  const defaultColors = mapBetterDiscordVariables(defaultVariables, baseTheme);
+  const defaultUi = mapProteusUiVariables(defaultVariables);
+
+  if (customCss) {
+    const customVariables = extractResolvedVariables(customCss, baseTheme);
+    const customColors = mapBetterDiscordVariables(customVariables, baseTheme);
+    const customUi = mapProteusUiVariables(customVariables);
+
+    return {
+      colors: ensureAllTokens({
+        ...defaultColors,
+        ...customColors,
+      }),
+      ui: ensureAllUiTokens({
+        ...defaultUi,
+        ...customUi,
+      }),
+    };
+  }
+
+  return {
+    colors: ensureAllTokens(defaultColors),
+    ui: ensureAllUiTokens(defaultUi),
+  };
+}
+
 export function compileThemeTokens(
   defaultCss: string,
   customCss: string | null | undefined,
   baseTheme: BaseTheme,
 ): ProteusTokenRecord {
-  const defaultVariables = extractResolvedVariables(defaultCss, baseTheme);
-  const defaultTokens = mapBetterDiscordVariables(defaultVariables, baseTheme);
-
-  if (customCss) {
-    const customVariables = extractResolvedVariables(customCss, baseTheme);
-    const customTokens = mapBetterDiscordVariables(customVariables, baseTheme);
-    return ensureAllTokens({
-      ...defaultTokens,
-      ...customTokens,
-    });
-  }
-
-  return ensureAllTokens(defaultTokens);
+  return compileThemeContract(defaultCss, customCss, baseTheme).colors;
 }
 
 export function buildCompiledThemeCss({
@@ -713,7 +786,7 @@ export function buildCompiledThemeCss({
   defaultCss,
   customCss,
 }: BuildCompiledThemeCssInput): string {
-  return renderCompiledCss(compileThemeTokens(defaultCss, customCss, baseTheme));
+  return renderCompiledCss(compileThemeContract(defaultCss, customCss, baseTheme));
 }
 
 export function extractThemeVariables(css: string, baseTheme: BaseTheme): Record<string, string> {

@@ -1,11 +1,16 @@
 import { Toast } from "@douyinfe/semi-ui";
 import {
   buildCompiledThemeCss,
-  compileThemeTokens,
+  compileThemeContract,
 } from "./themeAdapter";
-import type { BaseTheme, ProteusTokenRecord } from "./themeAdapter";
+import type { BaseTheme, ProteusThemeContract } from "./themeAdapter";
 
-export type { BaseTheme, ProteusTokenRecord } from "./themeAdapter";
+export type {
+  BaseTheme,
+  ProteusThemeContract,
+  ProteusTokenRecord,
+  ProteusUiTokenRecord,
+} from "./themeAdapter";
 
 export interface ThemeChangePayload {
   filename: string | null;
@@ -34,7 +39,7 @@ let availableThemes: string[] = [];
 let initialized = false;
 let defaultThemeCssCache: string | null = null;
 let stopWatchingThemes: (() => void) | null = null;
-const previewTokenCache = new Map<string, ProteusTokenRecord>();
+const previewThemeCache = new Map<string, ProteusThemeContract>();
 
 function emitCatalog(): void {
   for (const listener of catalogListeners) {
@@ -121,13 +126,13 @@ async function loadDefaultThemeCss(): Promise<string> {
   if (defaultThemeCssCache !== null) return defaultThemeCssCache;
   if (!hasThemeBridge()) return "";
 
-  defaultThemeCssCache = await window.bergamot.getThemeCss(DEFAULT_THEME_FILENAME).catch(() => "");
+  defaultThemeCssCache = await window.bergamot!.getThemeCss(DEFAULT_THEME_FILENAME).catch(() => "");
   return defaultThemeCssCache ?? "";
 }
 
 async function compileThemeCss(themeName: string | null, baseTheme: BaseTheme): Promise<string> {
   const defaultCss = await loadDefaultThemeCss();
-  const customCss = themeName ? await window.bergamot.getThemeCss(themeName) : null;
+  const customCss = themeName ? await window.bergamot!.getThemeCss(themeName) : null;
 
   if (!defaultCss) {
     throw new Error(`Default theme "${DEFAULT_THEME_FILENAME}" could not be loaded.`);
@@ -144,26 +149,26 @@ function getPreviewCacheKey(themeName: string | null, baseTheme: BaseTheme): str
   return `${baseTheme}:${themeName ?? "__default__"}`;
 }
 
-export async function getThemePreviewTokens(
+export async function getThemePreviewContract(
   themeName: string | null,
   baseTheme: BaseTheme,
-): Promise<ProteusTokenRecord> {
+): Promise<ProteusThemeContract> {
   const cacheKey = getPreviewCacheKey(themeName, baseTheme);
-  const cachedTokens = previewTokenCache.get(cacheKey);
-  if (cachedTokens) {
-    return cachedTokens;
+  const cachedContract = previewThemeCache.get(cacheKey);
+  if (cachedContract) {
+    return cachedContract;
   }
 
   const defaultCss = await loadDefaultThemeCss();
-  const customCss = themeName ? await window.bergamot.getThemeCss(themeName) : null;
+  const customCss = themeName ? await window.bergamot!.getThemeCss(themeName) : null;
 
   if (!defaultCss) {
     throw new Error(`Default theme "${DEFAULT_THEME_FILENAME}" could not be loaded.`);
   }
 
-  const previewTokens = compileThemeTokens(defaultCss, customCss, baseTheme);
-  previewTokenCache.set(cacheKey, previewTokens);
-  return previewTokens;
+  const previewContract = compileThemeContract(defaultCss, customCss, baseTheme);
+  previewThemeCache.set(cacheKey, previewContract);
+  return previewContract;
 }
 
 async function applyCurrentTheme(options?: {
@@ -213,7 +218,7 @@ export async function refreshThemeCatalog(): Promise<string[]> {
     return [];
   }
 
-  const themes = await window.bergamot.getAvailableThemes();
+  const themes = await window.bergamot!.getAvailableThemes();
   availableThemes = normalizeThemeList(themes);
   emitCatalog();
   emitState();
@@ -244,7 +249,7 @@ export async function setBaseTheme(theme: BaseTheme): Promise<void> {
 }
 
 function handleThemeChange(payload: ThemeChangePayload): void {
-  previewTokenCache.clear();
+  previewThemeCache.clear();
 
   if (payload.filename === DEFAULT_THEME_FILENAME) {
     defaultThemeCssCache = null;
@@ -300,8 +305,8 @@ export async function initializeThemeRuntime(): Promise<void> {
   await refreshThemeCatalog();
   await applyCurrentTheme({ silentMissingThemeFallback: true });
 
-  if (hasThemeBridge() && typeof window.bergamot.onThemesChanged === "function") {
-    stopWatchingThemes = window.bergamot.onThemesChanged(handleThemeChange);
+  if (hasThemeBridge() && typeof window.bergamot!.onThemesChanged === "function") {
+    stopWatchingThemes = window.bergamot!.onThemesChanged(handleThemeChange);
   }
 }
 
@@ -309,5 +314,5 @@ export function disposeThemeRuntime(): void {
   stopWatchingThemes?.();
   stopWatchingThemes = null;
   initialized = false;
-  previewTokenCache.clear();
+  previewThemeCache.clear();
 }

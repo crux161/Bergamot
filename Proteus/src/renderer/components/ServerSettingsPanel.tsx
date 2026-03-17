@@ -67,9 +67,9 @@ export const ServerSettingsPanel: React.FC<Props> = ({
   }, [server.id]);
 
   const navItems = [
-    { key: "overview", label: "Overview" },
+    { key: "overview", label: "Overview", icon: "circles-four" },
     ...(hasPermission(myPermissions, Permissions.MANAGE_ROLES)
-      ? [{ key: "roles", label: "Roles" }]
+      ? [{ key: "roles", label: "Roles", icon: "shield" }]
       : []),
   ];
 
@@ -83,7 +83,8 @@ export const ServerSettingsPanel: React.FC<Props> = ({
             className={`settings-nav__item ${activeKey === item.key ? "settings-nav__item--active" : ""}`}
             onClick={() => setActiveKey(item.key)}
           >
-            {item.label}
+            <PhIcon name={item.icon} size={18} className="settings-nav__item-icon" />
+            <span className="settings-nav__item-label">{item.label}</span>
           </div>
         ))}
       </nav>
@@ -330,7 +331,6 @@ const RolesEditor: React.FC<RolesEditorProps> = ({ serverId, roles, members, onC
                     value={editName}
                     onChange={(v) => { setEditName(v); setDirty(true); }}
                     disabled={selectedRole.is_default}
-                    style={{ backgroundColor: "var(--input-background)", borderColor: "var(--background-modifier-accent)", color: "var(--header-primary)" }}
                   />
                 </div>
                 <div className="roles-editor__field">

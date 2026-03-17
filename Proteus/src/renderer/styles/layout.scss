@@ -8,11 +8,12 @@
 }
 
 .login-card {
-  width: 400px;
-  padding: 40px;
+  width: 420px;
+  padding: 48px;
   background: var(--background-secondary);
-  border-radius: 12px;
+  border-radius: var(--radius-xl, 12px);
   border: 1px solid var(--background-modifier-accent);
+  box-shadow: var(--shadow-float, 0px 8px 24px rgba(0, 0, 0, 0.35));
 
   &__header {
     text-align: center;
@@ -32,21 +33,29 @@
     .semi-input-wrapper {
       background: var(--input-background);
       border-color: var(--background-modifier-accent);
+      border-radius: var(--radius-sm, 4px);
     }
   }
 
   &__submit {
-    margin-top: 16px !important;
+    margin-top: 20px !important;
     background: var(--brand-experiment) !important;
     border-color: var(--brand-experiment) !important;
     color: #ffffff !important;
-    height: 42px;
+    height: 48px;
     font-size: 15px;
     font-weight: 600;
+    border-radius: var(--radius-pill, 9999px) !important;
+    letter-spacing: 0.01em;
+    transition: background 0.2s, transform 0.1s;
 
     &:hover {
       background: var(--brand-experiment-560) !important;
       border-color: var(--brand-experiment-560) !important;
+    }
+
+    &:active {
+      transform: scale(0.98);
     }
   }
 
@@ -82,9 +91,9 @@
 
   &__server-config {
     margin-top: 16px;
-    padding: 12px;
+    padding: 14px;
     background: var(--background-tertiary);
-    border-radius: 8px;
+    border-radius: var(--radius-sm, 4px);
   }
 
   &__server-input {
@@ -171,10 +180,10 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: border-radius 0.2s, background 0.2s;
+    transition: border-radius 0.25s ease, background 0.2s, box-shadow 0.2s;
     color: var(--interactive-normal, #b5bac1);
     font-weight: 600;
-    font-size: 18px;
+    font-size: 16px;
     user-select: none;
 
     &:hover,
@@ -239,12 +248,13 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 6px 16px;
-    margin: 1px 8px;
-    border-radius: 6px;
+    padding: 7px 16px;
+    margin: 2px 8px;
+    border-radius: var(--radius-sm, 4px);
     cursor: pointer;
     color: var(--text-muted);
     font-size: 14px;
+    font-weight: 500;
     transition: background 0.15s, color 0.15s;
 
     &:hover {
@@ -349,7 +359,7 @@
       background-color: var(--channeltextarea-background) !important;
       border-color: var(--background-modifier-accent) !important;
       color: var(--text-normal) !important;
-      border-radius: 8px;
+      border-radius: var(--radius-md, 6px);
     }
   }
 
@@ -404,9 +414,9 @@
   left: 0;
   min-width: 200px;
   background: var(--background-floating, #111214);
-  border-radius: 8px;
-  padding: 6px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  border-radius: var(--radius-md, 6px);
+  padding: 8px;
+  box-shadow: var(--shadow-float, 0px 8px 24px rgba(0, 0, 0, 0.35));
   z-index: 200;
   animation: attachMenuSlideUp 0.12s ease-out;
 }
@@ -420,9 +430,10 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 10px;
-  border-radius: 4px;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm, 4px);
   font-size: 14px;
+  font-weight: 500;
   color: var(--interactive-normal);
   cursor: pointer;
   user-select: none;
@@ -511,10 +522,10 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 6px 16px;
+    padding: 7px 16px;
     cursor: pointer;
-    border-radius: 6px;
-    margin: 1px 8px;
+    border-radius: var(--radius-sm, 4px);
+    margin: 2px 8px;
     transition: background 0.15s;
 
     &:hover {
@@ -523,8 +534,8 @@
   }
 
   &__avatar {
-    width: 32px;
-    height: 32px;
+    width: 34px;
+    height: 34px;
     border-radius: 50%;
     background: var(--brand-experiment-560, #3d5d42);
     display: flex;
@@ -538,6 +549,7 @@
     &--img {
       object-fit: cover;
       background: none;
+      border-radius: 50%;
     }
   }
 
@@ -582,13 +594,13 @@
 .message {
   display: flex;
   gap: 12px;
-  padding: 4px 0;
+  padding: 6px 0;
 
   &:hover {
     background: var(--background-modifier-hover, rgba(64, 66, 73, 0.3));
-    border-radius: 6px;
+    border-radius: var(--radius-sm, 4px);
     margin: 0 -8px;
-    padding: 4px 8px;
+    padding: 6px 8px;
   }
 
   &__avatar {
@@ -644,21 +656,22 @@
   &__attachment-img {
     max-width: 400px;
     max-height: 300px;
-    border-radius: 8px;
+    border-radius: var(--radius-lg, 8px);
     cursor: pointer;
     object-fit: contain;
     display: block;
+    transition: box-shadow 0.15s;
 
     &:hover {
-      box-shadow: 0 0 0 2px var(--brand-experiment);
+      box-shadow: 0 0 0 2px var(--brand-experiment), var(--shadow-elevated);
     }
   }
 
   &__attachment-broken {
-    padding: 8px 12px;
+    padding: 10px 14px;
     background: var(--background-secondary);
     border: 1px solid var(--background-modifier-accent);
-    border-radius: 8px;
+    border-radius: var(--radius-sm, 4px);
     color: var(--text-muted);
     font-size: 13px;
     font-style: italic;
@@ -669,19 +682,21 @@
 .context-menu {
   position: fixed;
   z-index: 20000;
-  min-width: 180px;
+  min-width: 190px;
   background: var(--background-floating, #111214);
-  border-radius: 6px;
-  padding: 6px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  border-radius: var(--radius-md, 6px);
+  padding: 8px;
+  box-shadow: var(--shadow-float, 0px 8px 24px rgba(0, 0, 0, 0.35));
 
   &__item {
-    padding: 8px 10px;
-    border-radius: 4px;
+    padding: 9px 12px;
+    border-radius: var(--radius-sm, 4px);
     font-size: 13px;
+    font-weight: 500;
     color: var(--interactive-normal, #b5bac1);
     cursor: pointer;
     user-select: none;
+    transition: background 0.1s;
 
     &:hover {
       background: var(--brand-experiment);
@@ -728,7 +743,7 @@
     max-width: 90vw;
     max-height: 80vh;
     object-fit: contain;
-    border-radius: 4px;
+    border-radius: var(--radius-lg, 8px);
   }
 
   &__toolbar {
@@ -755,16 +770,18 @@
   }
 
   &__btn {
-    padding: 6px 14px;
-    border-radius: 4px;
+    padding: 8px 18px;
+    border-radius: var(--radius-pill, 9999px);
     background: var(--background-modifier-selected, #404249);
     border: none;
     color: var(--header-primary);
     font-size: 13px;
+    font-weight: 500;
     cursor: pointer;
     text-decoration: none;
     display: inline-flex;
     align-items: center;
+    transition: background 0.15s;
 
     &:hover {
       background: var(--brand-experiment);
@@ -813,10 +830,11 @@
   }
 
   &__item {
-    padding: 8px 12px;
-    margin: 1px 0;
-    border-radius: 4px;
+    padding: 9px 14px;
+    margin: 2px 0;
+    border-radius: var(--radius-sm, 4px);
     font-size: 14px;
+    font-weight: 500;
     color: var(--interactive-normal, #b5bac1);
     cursor: pointer;
     transition: background 0.1s, color 0.1s;
@@ -912,9 +930,10 @@
 .settings-card {
   background: var(--proteus-settings-surface);
   border: 1px solid var(--proteus-settings-border);
-  border-radius: 8px;
+  border-radius: var(--radius-lg, 8px);
   overflow: hidden;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow-elevated, 0px 2px 12px rgba(0, 0, 0, 0.25));
 
   &__banner {
     height: 100px;
@@ -2648,4 +2667,381 @@
 .call-overlay__ctrl-btn:focus-visible {
   outline: 2px solid var(--brand-experiment);
   outline-offset: 2px;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── Responsive Shell & Supplementary Overrides ──
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Responsive grid layout — replaces the base flexbox on .app-layout to support
+// drawer-based navigation on smaller screens while keeping the flat, flush
+// Discord-like appearance from the reference dashboard.
+
+.app-layout {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  height: 100vh;
+  width: 100vw;
+  min-height: 0;
+  overflow: hidden;
+  padding-top: env(titlebar-area-height, 0px);
+
+  &[data-layout-mode="desktop"] {
+    grid-template-columns: auto minmax(0, 1fr) var(--proteus-ui-right-rail-width);
+  }
+
+  &[data-layout-mode="wide-tablet"] {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  &[data-layout-mode="tablet"],
+  &[data-layout-mode="compact"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.app-layout__scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.app-layout__primary-nav {
+  position: relative;
+  z-index: 20;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+
+  > .server-list,
+  > .channel-sidebar {
+    height: 100%;
+  }
+
+  &--drawer {
+    position: fixed;
+    top: env(titlebar-area-height, 0px);
+    bottom: 0;
+    left: 0;
+    width: min(92vw, calc(72px + var(--proteus-ui-sidebar-width)));
+    transform: translateX(-100%);
+    transition: transform 0.22s ease;
+    pointer-events: none;
+    z-index: 70;
+  }
+
+  &--open {
+    transform: translateX(0);
+    pointer-events: auto;
+  }
+}
+
+.app-layout__workspace {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+}
+
+.app-layout__aux-panel {
+  min-width: 0;
+  min-height: 0;
+
+  > .member-sidebar,
+  > .dm-profile-sidebar {
+    height: 100%;
+  }
+
+  &--drawer {
+    position: fixed;
+    top: env(titlebar-area-height, 0px);
+    right: 0;
+    bottom: 0;
+    width: min(88vw, var(--proteus-ui-right-rail-width));
+    transform: translateX(100%);
+    transition: transform 0.22s ease;
+    pointer-events: none;
+    z-index: 70;
+  }
+
+  &--open {
+    transform: translateX(0);
+    pointer-events: auto;
+  }
+}
+
+// ── Helper classes used by components ──
+
+.channel-sidebar__header-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.channel-sidebar__header-action,
+.channel-sidebar__user-action {
+  cursor: pointer;
+  opacity: 0.7;
+  color: var(--interactive-normal);
+  flex-shrink: 0;
+  transition: color 0.15s, opacity 0.15s;
+
+  &:hover {
+    color: var(--header-primary);
+    opacity: 1;
+  }
+}
+
+.channel-sidebar__user-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.channel-sidebar__user-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--header-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.channel-sidebar__user-text {
+  font-size: 11px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// ── DM search input ──
+
+.channel-sidebar__dm-search {
+  padding: 12px 12px 0;
+}
+
+.channel-sidebar__dm-search-input {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm, 4px);
+  background: var(--input-background);
+  border: 1px solid var(--background-modifier-accent);
+  color: var(--text-normal);
+  font-size: 13px;
+  outline: none;
+
+  &::placeholder {
+    color: var(--text-muted);
+  }
+
+  &:focus {
+    border-color: var(--brand-experiment);
+  }
+}
+
+.channel-sidebar__dm-nav {
+  padding: 8px 8px 0;
+}
+
+.channel-sidebar__dm-header {
+  padding-top: 16px;
+}
+
+// ── Voice bar & user panel ──
+
+.channel-sidebar__voice-bar {
+  border-top: 1px solid var(--background-modifier-accent);
+}
+
+// ── DM profile sidebar sections ──
+
+.dm-profile-sidebar__header {
+  padding: 24px 16px 16px;
+  text-align: center;
+}
+
+.dm-profile-sidebar__section {
+  margin: 0;
+  padding: 12px 16px;
+  border-top: 1px solid var(--background-modifier-accent);
+}
+
+.dm-profile-sidebar__note-input {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm, 4px);
+  background: var(--input-background);
+  border: 1px solid var(--background-modifier-accent);
+  color: var(--text-normal);
+  font-size: 13px;
+  outline: none;
+
+  &::placeholder {
+    color: var(--text-muted);
+  }
+
+  &:focus {
+    border-color: var(--brand-experiment);
+  }
+}
+
+// ── Chat area header action buttons ──
+
+.chat-area {
+  &__header__name {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+  }
+
+  &__header__actions {
+    gap: 6px;
+  }
+
+  &__header__action-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm, 4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--interactive-normal);
+    transition: background 0.15s, color 0.15s;
+
+    &:hover {
+      background: var(--background-modifier-hover);
+      color: var(--interactive-hover);
+    }
+
+    &--shell {
+      margin-right: 2px;
+    }
+  }
+
+  &__header__divider {
+    width: 1px;
+    height: 24px;
+    background: var(--background-modifier-accent);
+    margin: 0 4px;
+  }
+}
+
+// ── Empty state ──
+
+.chat-area__empty-state {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 8px;
+  text-align: center;
+  padding: 24px;
+}
+
+.chat-area__empty-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--header-primary);
+}
+
+.chat-area__empty-copy {
+  max-width: 360px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+// ── Settings content input overrides ──
+
+.settings-content .semi-input-wrapper,
+.settings-content .semi-select,
+.settings-content .semi-select .semi-select-selection {
+  background: var(--proteus-settings-surface-strong) !important;
+  border-color: var(--proteus-settings-border) !important;
+}
+
+.settings-content .semi-input-wrapper:hover,
+.settings-content .semi-select:hover,
+.settings-content .semi-select:hover .semi-select-selection {
+  border-color: var(--text-muted) !important;
+}
+
+.settings-content .semi-input-wrapper-focus,
+.settings-content .semi-input-wrapper:focus-within,
+.settings-content .semi-select:focus-within,
+.settings-content .semi-select:focus-within .semi-select-selection,
+.settings-content .semi-select-open,
+.settings-content .semi-select-open .semi-select-selection {
+  border-color: var(--brand-experiment) !important;
+}
+
+// ── Theme preview density support ──
+
+.theme-thumbnail__preview {
+  border-radius: var(--theme-preview-radius, 4px);
+  box-shadow: var(--theme-preview-shadow, 0 1px 4px rgba(0, 0, 0, 0.15));
+}
+
+.theme-thumbnail__topbar {
+  top: calc(12px * var(--theme-preview-density, 1));
+  left: calc(12px * var(--theme-preview-density, 1));
+  right: calc(12px * var(--theme-preview-density, 1));
+}
+
+.theme-thumbnail__panel {
+  left: calc(12px * var(--theme-preview-density, 1));
+  right: calc(12px * var(--theme-preview-density, 1));
+  bottom: calc(12px * var(--theme-preview-density, 1));
+  height: calc(38px * var(--theme-preview-density, 1));
+  border-radius: calc(4px * var(--theme-preview-density, 1));
+}
+
+.theme-thumbnail__accent {
+  top: calc(24px * var(--theme-preview-density, 1));
+  right: calc(16px * var(--theme-preview-density, 1));
+  width: calc(24px * var(--theme-preview-density, 1));
+  height: calc(24px * var(--theme-preview-density, 1));
+}
+
+.theme-thumbnail__line {
+  left: calc(18px * var(--theme-preview-density, 1));
+
+  &--primary {
+    top: calc(28px * var(--theme-preview-density, 1));
+    width: calc(34px * var(--theme-preview-density, 1));
+  }
+
+  &--secondary {
+    top: calc(38px * var(--theme-preview-density, 1));
+    width: calc(24px * var(--theme-preview-density, 1));
+  }
+}
+
+// ── Responsive breakpoints ──
+
+@media (max-width: 819px) {
+  .settings-overlay {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .settings-nav {
+    width: auto;
+    min-width: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-layout__primary-nav--drawer,
+  .app-layout__aux-panel--drawer,
+  .server-list__item,
+  .message {
+    transition: none !important;
+    animation: none !important;
+  }
 }

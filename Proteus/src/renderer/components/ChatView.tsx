@@ -24,6 +24,12 @@ interface Props {
   onVoiceCall?: () => void;
   /** Called when user clicks video call */
   onVideoCall?: () => void;
+  /** Responsive shell toggle for navigation drawer */
+  showNavigationToggle?: boolean;
+  onToggleNavigation?: () => void;
+  /** Responsive shell toggle for detail drawer */
+  showDetailsToggle?: boolean;
+  onToggleDetails?: () => void;
 }
 
 function formatTime(iso: string): string {
@@ -104,6 +110,10 @@ export const ChatView: React.FC<Props> = ({
   isDm = false,
   onVoiceCall,
   onVideoCall,
+  showNavigationToggle = false,
+  onToggleNavigation,
+  showDetailsToggle = false,
+  onToggleDetails,
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
@@ -216,6 +226,13 @@ export const ChatView: React.FC<Props> = ({
   return (
     <div className="chat-area">
       <div className="chat-area__header">
+        {showNavigationToggle && (
+          <Tooltip content="Toggle Navigation" position="bottom">
+            <div className="chat-area__header__action-btn chat-area__header__action-btn--shell" onClick={onToggleNavigation}>
+              <PhIcon name="sidebar" size={20} />
+            </div>
+          </Tooltip>
+        )}
         <span className="chat-area__header__name">
           {isDm ? (
             <><PhIcon name="at" size={18} style={{ opacity: 0.6, marginRight: 4 }} />{channelName}</>
@@ -248,14 +265,14 @@ export const ChatView: React.FC<Props> = ({
             </div>
           </Tooltip>
           {isDm ? (
-            <Tooltip content="User Profile" position="bottom">
-              <div className="chat-area__header__action-btn">
+            <Tooltip content={showDetailsToggle ? "Toggle Profile" : "User Profile"} position="bottom">
+              <div className="chat-area__header__action-btn" onClick={showDetailsToggle ? onToggleDetails : undefined}>
                 <PhIcon name="user" size={20} />
               </div>
             </Tooltip>
           ) : (
-            <Tooltip content="Member List  (Ctrl+M)" position="bottom">
-              <div className="chat-area__header__action-btn">
+            <Tooltip content={showDetailsToggle ? "Toggle Member List" : "Member List  (Ctrl+M)"} position="bottom">
+              <div className="chat-area__header__action-btn" onClick={showDetailsToggle ? onToggleDetails : undefined}>
                 <PhIcon name="users" size={20} />
               </div>
             </Tooltip>
@@ -270,17 +287,9 @@ export const ChatView: React.FC<Props> = ({
 
       <div className="chat-area__messages" ref={scrollRef}>
         {messages.length === 0 && (
-          <div
-            style={{
-              flex: 1,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#5c5e66",
-              fontSize: 14,
-            }}
-          >
-            No messages yet. Say something!
+          <div className="chat-area__empty-state">
+            <span className="chat-area__empty-title">Nothing here yet</span>
+            <span className="chat-area__empty-copy">Start the conversation and Proteus will keep the thread warm.</span>
           </div>
         )}
 

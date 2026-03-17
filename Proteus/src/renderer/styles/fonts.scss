@@ -70,41 +70,102 @@
 }
 
 // ── Icon glyph definitions (only icons used in Proteus) ──
-.ph-hash:before { content: "\e2a2"; }
-.ph-speaker-high:before { content: "\e44a"; }
-.ph-plus:before { content: "\e3d4"; }
-.ph-gear:before { content: "\e270"; }
-.ph-paper-plane-right:before { content: "\e396"; }
-.ph-image:before { content: "\e2ca"; }
-.ph-x:before { content: "\e4f6"; }
-.ph-camera:before { content: "\e10e"; }
-.ph-user:before { content: "\e4c2"; }
-.ph-lock:before { content: "\e2fa"; }
-.ph-envelope:before { content: "\e214"; }
-.ph-trash:before { content: "\e4a6"; }
-.ph-sun:before { content: "\e472"; }
-.ph-moon:before { content: "\e330"; }
-.ph-rocket-launch:before { content: "\e3fe"; }
-.ph-game-controller:before { content: "\e26e"; }
-.ph-sign-out:before { content: "\e42a"; }
-.ph-x-circle:before { content: "\e4f8"; }
-.ph-plus-circle:before { content: "\e3d6"; }
-.ph-file:before { content: "\e230"; }
-.ph-chat-text:before { content: "\e136"; }
-.ph-chart-bar:before { content: "\e120"; }
-.ph-circles-four:before { content: "\e14e"; }
-.ph-eye:before { content: "\e224"; }
+.ph-at:before { content: "\e0ac"; }
 .ph-bell:before { content: "\e0ce"; }
+.ph-signal-high:before { content: "\e144"; } // Alias to Phosphor's cell-signal-high
+.ph-camera:before { content: "\e10e"; }
+.ph-chart-bar:before { content: "\e150"; }
+.ph-chat-text:before { content: "\e17a"; }
+.ph-chats-circle:before { content: "\e17e"; }
+.ph-circles-four:before { content: "\e190"; }
+.ph-envelope:before { content: "\e214"; }
+.ph-eye:before { content: "\e220"; }
+.ph-file:before { content: "\e230"; }
+.ph-game-controller:before { content: "\e26e"; }
+.ph-gamepad:before { content: "\e26e"; } // Alias to game-controller
+.ph-gear:before { content: "\e270"; }
 .ph-globe:before { content: "\e288"; }
+.ph-hash:before { content: "\e2a2"; }
+.ph-image:before { content: "\e2ca"; }
 .ph-keyboard:before { content: "\e2d8"; }
 .ph-link:before { content: "\e2e2"; }
-.ph-shield:before { content: "\e40a"; }
-.ph-translate:before { content: "\e4a2"; }
-.ph-user-circle:before { content: "\e4c4"; }
+.ph-lock:before { content: "\e2fa"; }
+.ph-magnifying-glass:before { content: "\e30c"; }
+.ph-microphone:before { content: "\e326"; }
+.ph-microphone-slash:before { content: "\e328"; }
+.ph-moon:before { content: "\e330"; }
+.ph-monitor-arrow-up:before { content: "\e58a"; }
 .ph-network:before { content: "\edde"; }
 .ph-paint-brush:before { content: "\e6f0"; }
+.ph-paper-plane-right:before { content: "\e396"; }
+.ph-phone:before { content: "\e3b8"; }
+.ph-phone-disconnect:before { content: "\e3bc"; }
+.ph-play:before { content: "\e3d0"; }
+.ph-plus:before { content: "\e3d4"; }
+.ph-plus-circle:before { content: "\e3d6"; }
+.ph-push-pin:before { content: "\e3e2"; }
+.ph-rocket-launch:before { content: "\e3fe"; }
+.ph-shield:before { content: "\e40a"; }
+.ph-sidebar:before { content: "\eab6"; }
+.ph-sign-out:before { content: "\e42a"; }
+.ph-speaker-high:before { content: "\e44a"; }
+.ph-speaker-slash:before { content: "\e45a"; }
+.ph-spinner:before { content: "\e66a"; }
+.ph-storefront:before { content: "\e470"; }
+.ph-sun:before { content: "\e472"; }
+.ph-translate:before { content: "\e4a2"; }
+.ph-trash:before { content: "\e4a6"; }
+.ph-user:before { content: "\e4c2"; }
+.ph-user-circle:before { content: "\e4c4"; }
+.ph-users:before { content: "\e4d6"; }
+.ph-video-camera:before { content: "\e4da"; }
+.ph-video-camera-slash:before { content: "\e4dc"; }
+.ph-x:before { content: "\e4f6"; }
+.ph-x-circle:before { content: "\e4f8"; }
 
-// ── HarmonyOS Sans ──
+// ── DM Sans (Figma design system primary typeface) ──
+
+@font-face {
+  font-family: "DM Sans";
+  src: url("../../../resources/DM-Sans/dm-sans-latin-300-normal.woff2") format("woff2");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "DM Sans";
+  src: url("../../../resources/DM-Sans/dm-sans-latin-400-normal.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "DM Sans";
+  src: url("../../../resources/DM-Sans/dm-sans-latin-500-normal.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "DM Sans";
+  src: url("../../../resources/DM-Sans/dm-sans-latin-600-normal.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "DM Sans";
+  src: url("../../../resources/DM-Sans/dm-sans-latin-700-normal.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+// ── HarmonyOS Sans (fallback / CJK support) ──
 // We use the Latin/standard variant; SC/TC available for CJK support
 
 @font-face {

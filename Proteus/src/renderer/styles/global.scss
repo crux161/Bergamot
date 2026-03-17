@@ -3,9 +3,9 @@
 // ── Semi Design CSS variable overrides ──
 // Neutral dark backgrounds with green accent
 :root {
-  // Typography
-  --semi-font-family: "HarmonyOS Sans", -apple-system, BlinkMacSystemFont,
-    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  // Typography — DM Sans (Figma design system) with HarmonyOS Sans fallback
+  --semi-font-family: "DM Sans", "HarmonyOS Sans", -apple-system,
+    BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 
   // Default Proteus token fallbacks. The runtime theme adapter overrides these
   // with compiled values derived from the selected CSS theme file.
@@ -44,6 +44,41 @@
   --proteus-mention: #3c4533;
   --proteus-mention-bg: #2f3424;
 
+  // UI-semantic contract. Bundled Proteus themes may override these to adjust
+  // shape, density, and elevation while BetterDiscord themes inherit them.
+  --proteus-ui-radius-card: 8px;
+  --proteus-ui-radius-control: 4px;
+  --proteus-ui-radius-pill: 9999px;
+  --proteus-ui-shadow-card: 0 2px 10px rgba(0, 0, 0, 0.2);
+  --proteus-ui-shadow-float: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --proteus-ui-shell-gap: 0px;
+  --proteus-ui-panel-gap: 0px;
+  --proteus-ui-content-gap: 0px;
+  --proteus-ui-header-height: 52px;
+  --proteus-ui-sidebar-width: 240px;
+  --proteus-ui-right-rail-width: 240px;
+  --proteus-ui-density-scale: 1;
+
+  // Derived semantic helpers.
+  --proteus-ui-shell-gap-size: calc(var(--proteus-ui-shell-gap) * var(--proteus-ui-density-scale));
+  --proteus-ui-panel-gap-size: calc(var(--proteus-ui-panel-gap) * var(--proteus-ui-density-scale));
+  --proteus-ui-content-gap-size: calc(var(--proteus-ui-content-gap) * var(--proteus-ui-density-scale));
+  --proteus-ui-surface-shell: var(--proteus-bg-0);
+  --proteus-ui-surface-chrome: var(--proteus-bg-1);
+  --proteus-ui-surface-card: var(--proteus-bg-2);
+  --proteus-ui-surface-card-strong: var(--proteus-bg-3);
+  --proteus-ui-surface-pill: var(--proteus-bg-3);
+  --proteus-ui-surface-glass: var(--proteus-bg-0);
+  --proteus-input-surface: var(--proteus-bg-0);
+  --proteus-input-surface-hover: var(--proteus-bg-3);
+  --proteus-input-surface-focus: var(--proteus-bg-3);
+  --proteus-input-border: var(--proteus-border);
+  --proteus-input-border-focus: var(--proteus-accent);
+  --proteus-input-text: var(--proteus-text-0);
+  --proteus-input-placeholder: var(--proteus-text-2);
+  --proteus-input-icon: var(--proteus-text-2);
+  --proteus-input-shadow: none;
+
   // Opaque settings-shell surfaces intentionally stay solid even when a
   // BetterDiscord theme uses transparent app backgrounds.
   --proteus-settings-overlay: #111317;
@@ -51,6 +86,29 @@
   --proteus-settings-surface: #20242b;
   --proteus-settings-surface-strong: #272c34;
   --proteus-settings-border: rgba(255, 255, 255, 0.08);
+
+  // Design-system spacing and primitive tokens derive from UI semantics.
+  --space-1: 2px;
+  --space-2: 4px;
+  --space-3: 6px;
+  --space-4: 8px;
+  --space-6: 10px;
+  --space-8: 12px;
+  --space-10: 12px;
+  --space-12: 12px;
+  --space-16: 16px;
+  --space-20: 18px;
+  --space-24: 18px;
+
+  --radius-sm: var(--proteus-ui-radius-control);
+  --radius-md: calc(var(--proteus-ui-radius-control) + 2px);
+  --radius-lg: var(--proteus-ui-radius-card);
+  --radius-xl: calc(var(--proteus-ui-radius-card) + 4px);
+  --radius-pill: var(--proteus-ui-radius-pill);
+
+  --shadow-elevated: var(--proteus-ui-shadow-card);
+  --shadow-float: var(--proteus-ui-shadow-float);
+  --shadow-inset: inset 0px 1px 4px rgba(0, 0, 0, 0.15);
 
   // Semi Design tokens now derive from the normalized Proteus contract.
   --semi-color-primary: var(--proteus-accent);
@@ -153,6 +211,25 @@
   --proteus-mention: #d4e6cf;
   --proteus-mention-bg: #e3efe0;
 
+  --proteus-ui-shadow-card: 0 1px 4px rgba(0, 0, 0, 0.08);
+  --proteus-ui-shadow-float: 0 4px 16px rgba(0, 0, 0, 0.12);
+
+  --proteus-ui-surface-shell: var(--proteus-bg-1);
+  --proteus-ui-surface-chrome: var(--proteus-bg-1);
+  --proteus-ui-surface-card: var(--proteus-bg-2);
+  --proteus-ui-surface-card-strong: var(--proteus-bg-3);
+  --proteus-ui-surface-pill: var(--proteus-bg-3);
+  --proteus-ui-surface-glass: var(--proteus-bg-2);
+  --proteus-input-surface: var(--proteus-bg-0);
+  --proteus-input-surface-hover: var(--proteus-bg-3);
+  --proteus-input-surface-focus: var(--proteus-bg-3);
+  --proteus-input-border: var(--proteus-border-subtle);
+  --proteus-input-border-focus: var(--proteus-accent);
+  --proteus-input-text: var(--proteus-text-1);
+  --proteus-input-placeholder: var(--proteus-text-2);
+  --proteus-input-icon: var(--proteus-text-2);
+  --proteus-input-shadow: none;
+
   --proteus-settings-overlay: #e9edf3;
   --proteus-settings-nav: #f3f5f9;
   --proteus-settings-surface: #ffffff;
@@ -216,4 +293,103 @@ body,
 ::selection {
   background: var(--proteus-selection, #2e4a3e);
   color: var(--header-primary, #e0e1e5);
+}
+
+// Shared form controls
+.semi-input-wrapper,
+.semi-select,
+.semi-select .semi-select-selection,
+.semi-input-number {
+  background: var(--proteus-input-surface) !important;
+  border-color: var(--proteus-input-border) !important;
+  color: var(--proteus-input-text) !important;
+  box-shadow: var(--proteus-input-shadow) !important;
+  transition:
+    background 0.16s ease,
+    border-color 0.16s ease,
+    box-shadow 0.16s ease,
+    transform 0.12s ease;
+}
+
+.semi-input-wrapper:hover,
+.semi-select:hover,
+.semi-select:hover .semi-select-selection,
+.semi-input-number:hover {
+  background: var(--proteus-input-surface-hover) !important;
+  border-color: color-mix(in srgb, var(--proteus-input-border) 86%, var(--proteus-input-border-focus) 14%) !important;
+}
+
+.semi-input-wrapper-focus,
+.semi-input-wrapper:focus-within,
+.semi-select:focus-within,
+.semi-select:focus-within .semi-select-selection,
+.semi-select-open,
+.semi-select-open .semi-select-selection,
+.semi-input-number:focus-within {
+  background: var(--proteus-input-surface-focus) !important;
+  border-color: var(--proteus-input-border-focus) !important;
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--proteus-input-border-focus) 18%, transparent),
+    var(--proteus-input-shadow) !important;
+}
+
+.semi-input-wrapper .semi-input,
+.semi-input-wrapper input,
+.semi-input-wrapper textarea,
+.semi-input,
+.semi-input-textarea,
+.semi-select-selection-text,
+.semi-select-selection-search {
+  color: var(--proteus-input-text) !important;
+  font-weight: 500;
+}
+
+.semi-input-wrapper .semi-input::placeholder,
+.semi-input-wrapper input::placeholder,
+.semi-input-wrapper textarea::placeholder,
+.semi-input::placeholder,
+.semi-input-textarea::placeholder,
+.semi-select-selection-search::placeholder {
+  color: var(--proteus-input-placeholder) !important;
+  opacity: 1;
+}
+
+.semi-select-selection-placeholder,
+.semi-input-wrapper .semi-input-prefix,
+.semi-input-wrapper .semi-input-suffix,
+.semi-input-wrapper .semi-input-clearbtn,
+.semi-select-arrow,
+.semi-select-clear {
+  color: var(--proteus-input-icon) !important;
+}
+
+.semi-select .semi-select-selection {
+  min-height: inherit;
+  border-radius: inherit !important;
+}
+
+.semi-select .semi-select-selection-placeholder {
+  color: var(--proteus-input-placeholder) !important;
+}
+
+.semi-modal-content {
+  background: var(--background-floating) !important;
+  border: 1px solid var(--background-modifier-accent);
+  border-radius: var(--radius-sm, 4px) !important;
+  box-shadow: var(--shadow-float) !important;
+  overflow: hidden;
+}
+
+.semi-modal-header,
+.semi-modal-footer {
+  background: transparent !important;
+  border-color: var(--background-modifier-accent) !important;
+}
+
+.semi-modal-title {
+  color: var(--header-primary) !important;
+}
+
+.semi-modal-body {
+  color: var(--text-normal);
 }

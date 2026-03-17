@@ -8,7 +8,7 @@ import {
   getAvailableThemes as getRuntimeThemes,
   getStoredBaseTheme,
   getThemeRuntimeState,
-  getThemePreviewTokens,
+  getThemePreviewContract,
   hasThemeBridge,
   initializeThemeRuntime,
   refreshThemeCatalog,
@@ -17,7 +17,8 @@ import {
   subscribeThemeCatalog,
   subscribeThemeState,
 } from "../theme/runtime";
-import type { BaseTheme, ProteusTokenRecord } from "../theme/runtime";
+import type { BaseTheme, ProteusThemeContract } from "../theme/runtime";
+import { isWebPlatform } from "../services/webBridge";
 
 // ── Settings navigation structure ──
 
@@ -145,7 +146,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
 interface ThemePreviewOption {
   filename: string | null;
   label: string;
-  tokens: ProteusTokenRecord;
+  theme: ProteusThemeContract;
 }
 
 function formatThemeWord(word: string): string {
@@ -173,18 +174,22 @@ function formatThemeLabel(filename: string | null): string {
     .join(" ");
 }
 
-function buildThemePreviewStyle(tokens: ProteusTokenRecord): React.CSSProperties {
+function buildThemePreviewStyle(theme: ProteusThemeContract): React.CSSProperties {
+  const { colors, ui } = theme;
   return {
-    ["--theme-preview-bg-0" as "--theme-preview-bg-0"]: tokens["bg-0"],
-    ["--theme-preview-bg-1" as "--theme-preview-bg-1"]: tokens["bg-1"],
-    ["--theme-preview-bg-2" as "--theme-preview-bg-2"]: tokens["bg-2"],
-    ["--theme-preview-bg-3" as "--theme-preview-bg-3"]: tokens["bg-3"],
-    ["--theme-preview-accent" as "--theme-preview-accent"]: tokens.accent,
-    ["--theme-preview-accent-soft" as "--theme-preview-accent-soft"]: tokens["accent-subtle"],
-    ["--theme-preview-text" as "--theme-preview-text"]: tokens["text-0"],
-    ["--theme-preview-muted" as "--theme-preview-muted"]: tokens["text-2"],
-    ["--theme-preview-border" as "--theme-preview-border"]: tokens.border,
-    ["--theme-preview-selected" as "--theme-preview-selected"]: tokens.selected,
+    ["--theme-preview-bg-0" as "--theme-preview-bg-0"]: colors["bg-0"],
+    ["--theme-preview-bg-1" as "--theme-preview-bg-1"]: colors["bg-1"],
+    ["--theme-preview-bg-2" as "--theme-preview-bg-2"]: colors["bg-2"],
+    ["--theme-preview-bg-3" as "--theme-preview-bg-3"]: colors["bg-3"],
+    ["--theme-preview-accent" as "--theme-preview-accent"]: colors.accent,
+    ["--theme-preview-accent-soft" as "--theme-preview-accent-soft"]: colors["accent-subtle"],
+    ["--theme-preview-text" as "--theme-preview-text"]: colors["text-0"],
+    ["--theme-preview-muted" as "--theme-preview-muted"]: colors["text-2"],
+    ["--theme-preview-border" as "--theme-preview-border"]: colors.border,
+    ["--theme-preview-selected" as "--theme-preview-selected"]: colors.selected,
+    ["--theme-preview-radius" as "--theme-preview-radius"]: ui["radius-card"],
+    ["--theme-preview-shadow" as "--theme-preview-shadow"]: ui["shadow-card"],
+    ["--theme-preview-density" as "--theme-preview-density"]: ui["density-scale"],
   } as React.CSSProperties;
 }
 
@@ -374,7 +379,7 @@ const ProfileSettings: React.FC<{ currentUser: UserRead; onUserUpdated?: (user: 
               <Input
                 value={displayName}
                 onChange={setDisplayName}
-                style={{ flex: 1, backgroundColor: "var(--proteus-settings-surface-strong)", borderColor: "var(--proteus-settings-border)", color: "var(--header-primary)" }}
+                style={{ flex: 1 }}
                 maxLength={64}
                 autoFocus
                 onKeyDown={(e) => e.key === "Enter" && handleSaveDisplayName()}
@@ -462,7 +467,6 @@ const ProfileSettings: React.FC<{ currentUser: UserRead; onUserUpdated?: (user: 
                 onChange={setStatusMessage}
                 placeholder="What are you up to?"
                 maxLength={128}
-                style={{ backgroundColor: "var(--proteus-settings-surface-strong)", borderColor: "var(--proteus-settings-border)", color: "var(--header-primary)" }}
               />
             </div>
           )}
@@ -559,7 +563,7 @@ const AppearanceSettings: React.FC = () => {
       .finally(() => setLoading(false));
 
     if (hasThemeBridge()) {
-      window.bergamot.getThemesPath().then(setThemesPath).catch(() => {});
+      window.bergamot?.getThemesPath().then(setThemesPath).catch(() => {});
     }
 
     return () => {
@@ -583,21 +587,21 @@ const AppearanceSettings: React.FC = () => {
 
     void (async () => {
       try {
-        const fallbackTokens = await getThemePreviewTokens(null, baseTheme);
+        const fallbackTheme = await getThemePreviewContract(null, baseTheme);
         const previewEntries = await Promise.all(
           [null, ...themes].map(async (filename) => {
             try {
-              const tokens = await getThemePreviewTokens(filename, baseTheme);
+              const theme = await getThemePreviewContract(filename, baseTheme);
               return {
                 filename,
                 label: formatThemeLabel(filename),
-                tokens,
+                theme,
               };
             } catch {
               return {
                 filename,
                 label: formatThemeLabel(filename),
-                tokens: fallbackTokens,
+                theme: fallbackTheme,
               };
             }
           }),
@@ -653,13 +657,13 @@ const AppearanceSettings: React.FC = () => {
         </div>
       </div>
 
-      {/* BetterDiscord theme selector */}
+      {/* Custom theme selector */}
       <div className="settings-card" style={{ padding: 24 }}>
         <div className="theme-gallery__header">
           <div>
-            <h3 style={{ color: "var(--header-primary)", marginBottom: 8 }}>BetterDiscord Themes</h3>
+            <h3 style={{ color: "var(--header-primary)", marginBottom: 8 }}>Custom Themes</h3>
             <p className="theme-gallery__description">
-              Pick a theme from its palette preview. Proteus will hot reload if the selected file changes.
+              Pick a bundled Proteus or BetterDiscord theme from its preview. Proteus will hot reload if the selected file changes.
             </p>
           </div>
           {hasThemeBridge() && (
@@ -667,13 +671,15 @@ const AppearanceSettings: React.FC = () => {
               <Button size="small" theme="borderless" style={{ color: "var(--text-normal)" }} onClick={fetchThemes}>
                 Refresh
               </Button>
-              <Button
-                size="small"
-                style={{ background: "var(--brand-experiment)", borderColor: "var(--brand-experiment)", color: "#fff" }}
-                onClick={() => window.bergamot.openThemesFolder()}
-              >
-                Open Themes Folder
-              </Button>
+              {!isWebPlatform() && (
+                <Button
+                  size="small"
+                  style={{ background: "var(--brand-experiment)", borderColor: "var(--brand-experiment)", color: "#fff" }}
+                  onClick={() => window.bergamot?.openThemesFolder()}
+                >
+                  Open Themes Folder
+                </Button>
+              )}
             </div>
           )}
         </div>
@@ -695,7 +701,7 @@ const AppearanceSettings: React.FC = () => {
                       key={preview.filename ?? "__proteus_default__"}
                       type="button"
                       className={`theme-thumbnail ${isActive ? "theme-thumbnail--active" : ""}`}
-                      style={buildThemePreviewStyle(preview.tokens)}
+                      style={buildThemePreviewStyle(preview.theme)}
                       onClick={() => { void selectTheme(preview.filename); }}
                       aria-pressed={isActive}
                       disabled={loading}
@@ -782,7 +788,7 @@ const ConnectionSettings: React.FC = () => {
             value={serverUrl}
             onChange={(v) => { setUrl(v); setSaved(false); }}
             placeholder="http://localhost:8000"
-            style={{ flex: 1, backgroundColor: "var(--proteus-settings-surface-strong)", borderColor: "var(--proteus-settings-border)", color: "var(--header-primary)" }}
+            style={{ flex: 1 }}
             onKeyDown={(e) => e.key === "Enter" && isDirty && handleSave()}
           />
           <Button

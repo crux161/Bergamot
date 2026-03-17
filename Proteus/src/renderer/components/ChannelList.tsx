@@ -266,11 +266,11 @@ export const ChannelList: React.FC<Props> = ({
                 className={`channel-sidebar__user-status channel-sidebar__user-status--${currentUser.status || "online"}`}
               />
             </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--header-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <div className="channel-sidebar__user-copy">
+              <div className="channel-sidebar__user-name">
                 {currentUser.display_name || currentUser.username}
               </div>
-              <div style={{ fontSize: 11, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <div className="channel-sidebar__user-text">
                 {currentUser.status_message || (currentUser.status === "dnd" ? "Do Not Disturb" : currentUser.status === "idle" ? "Idle" : "Online")}
               </div>
             </div>
@@ -279,7 +279,7 @@ export const ChannelList: React.FC<Props> = ({
                 <PhIcon
                   name="gear"
                   size={16}
-                  style={{ cursor: "pointer", color: "var(--text-muted)", flexShrink: 0 }}
+                  className="channel-sidebar__user-action"
                   onClick={onOpenSettings}
                 />
               </Tooltip>
@@ -294,13 +294,13 @@ export const ChannelList: React.FC<Props> = ({
   return (
     <div className="channel-sidebar">
       <div className="channel-sidebar__header">
-        <span style={{ flex: 1 }}>{serverName}</span>
+        <span className="channel-sidebar__header-title">{serverName}</span>
         {canOpenServerSettings && onOpenServerSettings && (
           <Tooltip content="Server Settings" position="bottom">
             <PhIcon
               name="gear"
               size={14}
-              style={{ cursor: "pointer", opacity: 0.7, marginRight: 4 }}
+              className="channel-sidebar__header-action"
               onClick={onOpenServerSettings}
             />
           </Tooltip>
@@ -310,7 +310,7 @@ export const ChannelList: React.FC<Props> = ({
             <PhIcon
               name="plus"
               size={14}
-              style={{ cursor: "pointer", opacity: 0.7 }}
+              className="channel-sidebar__header-action"
               onClick={onAddChannel}
             />
           </Tooltip>
@@ -381,11 +381,11 @@ export const ChannelList: React.FC<Props> = ({
               className={`channel-sidebar__user-status channel-sidebar__user-status--${currentUser.status || "online"}`}
             />
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--header-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <div className="channel-sidebar__user-copy">
+            <div className="channel-sidebar__user-name">
               {currentUser.display_name || currentUser.username}
             </div>
-            <div style={{ fontSize: 11, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <div className="channel-sidebar__user-text">
               {currentUser.status_message || (currentUser.status === "dnd" ? "Do Not Disturb" : currentUser.status === "idle" ? "Idle" : "Online")}
             </div>
           </div>
@@ -394,7 +394,7 @@ export const ChannelList: React.FC<Props> = ({
               <PhIcon
                 name="gear"
                 size={16}
-                style={{ cursor: "pointer", color: "var(--text-muted)", flexShrink: 0 }}
+                className="channel-sidebar__user-action"
                 onClick={onOpenSettings}
               />
             </Tooltip>

@@ -4,32 +4,46 @@ import { PhIcon } from "./PhIcon";
 import type { UserRead, UserUpdate } from "../services/api";
 import * as api from "../services/api";
 import { getConfiguredServerUrl, setServerUrl } from "../services/api";
+import {
+  getAvailableThemes as getRuntimeThemes,
+  getStoredBaseTheme,
+  getThemeRuntimeState,
+  getThemePreviewTokens,
+  hasThemeBridge,
+  initializeThemeRuntime,
+  refreshThemeCatalog,
+  selectTheme as selectRuntimeTheme,
+  setBaseTheme as setRuntimeBaseTheme,
+  subscribeThemeCatalog,
+  subscribeThemeState,
+} from "../theme/runtime";
+import type { BaseTheme, ProteusTokenRecord } from "../theme/runtime";
 
 // ── Settings navigation structure ──
 
 interface SettingsSection {
   label: string;
-  items: { key: string; label: string }[];
+  items: { key: string; label: string; icon: string }[];
 }
 
 const SECTIONS: SettingsSection[] = [
   {
     label: "User Settings",
     items: [
-      { key: "account", label: "My Account" },
-      { key: "profile", label: "User Profile" },
-      { key: "privacy", label: "Privacy & Safety" },
-      { key: "connections", label: "Connections" },
+      { key: "account", label: "My Account", icon: "user-circle" },
+      { key: "profile", label: "User Profile", icon: "eye" },
+      { key: "privacy", label: "Privacy & Safety", icon: "shield" },
+      { key: "connections", label: "Connections", icon: "link" },
     ],
   },
   {
     label: "App Settings",
     items: [
-      { key: "appearance", label: "Appearance" },
-      { key: "connection", label: "Connection" },
-      { key: "notifications", label: "Notifications" },
-      { key: "keybinds", label: "Keybinds" },
-      { key: "language", label: "Language" },
+      { key: "appearance", label: "Appearance", icon: "paint-brush" },
+      { key: "connection", label: "Connection", icon: "network" },
+      { key: "notifications", label: "Notifications", icon: "bell" },
+      { key: "keybinds", label: "Keybinds", icon: "keyboard" },
+      { key: "language", label: "Language", icon: "translate" },
     ],
   },
 ];
@@ -66,7 +80,8 @@ export const SettingsPanel: React.FC<Props> = ({ currentUser, onClose, onLogout,
                 className={`settings-nav__item ${activeKey === item.key ? "settings-nav__item--active" : ""}`}
                 onClick={() => setActiveKey(item.key)}
               >
-                {item.label}
+                <PhIcon name={item.icon} size={18} className="settings-nav__item-icon" />
+                <span className="settings-nav__item-label">{item.label}</span>
               </div>
             ))}
           </div>
@@ -76,7 +91,8 @@ export const SettingsPanel: React.FC<Props> = ({ currentUser, onClose, onLogout,
           className="settings-nav__item settings-nav__item--danger"
           onClick={onLogout}
         >
-          Log Out
+          <PhIcon name="sign-out" size={18} className="settings-nav__item-icon" />
+          <span className="settings-nav__item-label">Log Out</span>
         </div>
       </nav>
 
@@ -120,11 +136,57 @@ function resolveUrl(url: string | null): string | null {
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  online: { label: "Online", color: "#23a55a" },
-  idle: { label: "Idle", color: "#f0b232" },
-  dnd: { label: "Do Not Disturb", color: "#f23f43" },
-  offline: { label: "Invisible", color: "#80848e" },
+  online: { label: "Online", color: "var(--status-positive)" },
+  idle: { label: "Idle", color: "var(--status-warning)" },
+  dnd: { label: "Do Not Disturb", color: "var(--status-danger)" },
+  offline: { label: "Invisible", color: "var(--text-muted)" },
 };
+
+interface ThemePreviewOption {
+  filename: string | null;
+  label: string;
+  tokens: ProteusTokenRecord;
+}
+
+function formatThemeWord(word: string): string {
+  if (!word) return word;
+  if (word.toLowerCase() === "amoled") return "AMOLED";
+  if (/^[A-Z0-9]+$/.test(word)) return word;
+  return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+}
+
+function formatThemeLabel(filename: string | null): string {
+  if (!filename) return "Proteus Default";
+
+  const withoutExtension = filename
+    .replace(/\.theme\.css$/i, "")
+    .replace(/\.css$/i, "");
+  const spaced = withoutExtension
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return spaced
+    .split(" ")
+    .map(formatThemeWord)
+    .join(" ");
+}
+
+function buildThemePreviewStyle(tokens: ProteusTokenRecord): React.CSSProperties {
+  return {
+    ["--theme-preview-bg-0" as "--theme-preview-bg-0"]: tokens["bg-0"],
+    ["--theme-preview-bg-1" as "--theme-preview-bg-1"]: tokens["bg-1"],
+    ["--theme-preview-bg-2" as "--theme-preview-bg-2"]: tokens["bg-2"],
+    ["--theme-preview-bg-3" as "--theme-preview-bg-3"]: tokens["bg-3"],
+    ["--theme-preview-accent" as "--theme-preview-accent"]: tokens.accent,
+    ["--theme-preview-accent-soft" as "--theme-preview-accent-soft"]: tokens["accent-subtle"],
+    ["--theme-preview-text" as "--theme-preview-text"]: tokens["text-0"],
+    ["--theme-preview-muted" as "--theme-preview-muted"]: tokens["text-2"],
+    ["--theme-preview-border" as "--theme-preview-border"]: tokens.border,
+    ["--theme-preview-selected" as "--theme-preview-selected"]: tokens.selected,
+  } as React.CSSProperties;
+}
 
 const AccountSettings: React.FC<{ currentUser: UserRead }> = ({ currentUser }) => {
   const bannerUrl = resolveUrl(currentUser.banner_url);
@@ -141,7 +203,7 @@ const AccountSettings: React.FC<{ currentUser: UserRead }> = ({ currentUser }) =
           {avatarUrl ? (
             <Avatar size="large" src={avatarUrl} style={{ width: 56, height: 56 }} />
           ) : (
-            <Avatar size="large" style={{ backgroundColor: "#3d5d42", color: "#e0e1e5", width: 56, height: 56, fontSize: 22 }}>
+            <Avatar size="large" style={{ backgroundColor: "var(--semi-color-primary-light-default)", color: "var(--header-primary)", width: 56, height: 56, fontSize: 22 }}>
               {currentUser.username[0].toUpperCase()}
             </Avatar>
           )}
@@ -170,10 +232,10 @@ const AccountSettings: React.FC<{ currentUser: UserRead }> = ({ currentUser }) =
             <div>
               <div className="settings-card__label">Status</div>
               <div className="settings-card__value" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: STATUS_LABELS[currentUser.status]?.color || "#23a55a", display: "inline-block" }} />
+                <span style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: STATUS_LABELS[currentUser.status]?.color || "var(--status-positive)", display: "inline-block" }} />
                 {STATUS_LABELS[currentUser.status]?.label || "Online"}
                 {currentUser.status_message && (
-                  <span style={{ color: "#80848e", marginLeft: 4 }}>— {currentUser.status_message}</span>
+                  <span style={{ color: "var(--text-muted)", marginLeft: 4 }}>— {currentUser.status_message}</span>
                 )}
               </div>
             </div>
@@ -293,309 +355,318 @@ const ProfileSettings: React.FC<{ currentUser: UserRead; onUserUpdated?: (user: 
     }
   }, [onUserUpdated]);
 
-  return (
-    <div>
-      {/* Hidden file inputs */}
-      <input ref={avatarInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleAvatarUpload} />
-      <input ref={bannerInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleBannerUpload} />
+  const previewName = displayName || currentUser.display_name || currentUser.username;
+  const previewStatus = STATUS_LABELS[status] || STATUS_LABELS.online;
 
-      {/* Banner section */}
-      <div className="settings-card profile-banner-card">
-        <div
-          className="profile-banner"
-          style={bannerUrl ? { backgroundImage: `url(${bannerUrl})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
-        >
-          <div className="profile-banner__overlay">
-            <Button
-              icon={<PhIcon name="camera" />}
-              theme="borderless"
-              style={{ color: "#fff", background: "rgba(0,0,0,0.5)", borderRadius: 20 }}
-              onClick={() => bannerInputRef.current?.click()}
-            >
-              Change Banner
-            </Button>
-            {(currentUser.banner_url || bannerPreview) && (
+  return (
+    <div className="profile-settings-layout">
+      {/* Left column — editor fields */}
+      <div className="profile-settings-layout__editor">
+        {/* Hidden file inputs */}
+        <input ref={avatarInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleAvatarUpload} />
+        <input ref={bannerInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleBannerUpload} />
+
+        {/* Display Name */}
+        <div className="settings-card" style={{ padding: 24 }}>
+          <div className="settings-card__label" style={{ marginBottom: 8 }}>Display Name</div>
+          {editingName ? (
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <Input
+                value={displayName}
+                onChange={setDisplayName}
+                style={{ flex: 1, backgroundColor: "var(--proteus-settings-surface-strong)", borderColor: "var(--proteus-settings-border)", color: "var(--header-primary)" }}
+                maxLength={64}
+                autoFocus
+                onKeyDown={(e) => e.key === "Enter" && handleSaveDisplayName()}
+              />
               <Button
-                theme="borderless"
-                style={{ color: "#fff", background: "rgba(0,0,0,0.5)", borderRadius: 20 }}
-                onClick={handleRemoveBanner}
+                size="small"
+                style={{ background: "var(--brand-experiment)", borderColor: "var(--brand-experiment)", color: "#fff" }}
+                loading={saving}
+                onClick={handleSaveDisplayName}
               >
-                Remove
+                Save
               </Button>
-            )}
-          </div>
+              <Button size="small" theme="borderless" style={{ color: "var(--text-normal)" }} onClick={() => { setEditingName(false); setDisplayName(currentUser.display_name || ""); }}>
+                Cancel
+              </Button>
+            </div>
+          ) : (
+            <div className="settings-card__info-row" style={{ padding: 0, border: "none" }}>
+              <div className="settings-card__value">{currentUser.display_name || currentUser.username}</div>
+              <Button size="small" theme="light" onClick={() => setEditingName(true)}>Edit</Button>
+            </div>
+          )}
         </div>
 
-        {/* Avatar + name area */}
-        <div className="profile-avatar-area">
-          <div className="profile-avatar-wrapper" onClick={() => avatarInputRef.current?.click()}>
-            {avatarUrl ? (
-              <Avatar src={avatarUrl} style={{ width: 80, height: 80 }} />
-            ) : (
-              <Avatar style={{ backgroundColor: "#3d5d42", color: "#e0e1e5", width: 80, height: 80, fontSize: 32 }}>
-                {currentUser.username[0].toUpperCase()}
-              </Avatar>
-            )}
-            <div className="profile-avatar-wrapper__overlay">
-              <PhIcon name="camera" size={20} />
-            </div>
-          </div>
-          <div className="profile-avatar-actions">
+        {/* Avatar */}
+        <div className="settings-card" style={{ padding: 24 }}>
+          <div className="settings-card__label" style={{ marginBottom: 12 }}>Avatar</div>
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
             <Button
               size="small"
-              style={{ background: "#6b9362", borderColor: "#6b9362", color: "#fff" }}
+              style={{ background: "var(--brand-experiment)", borderColor: "var(--brand-experiment)", color: "#fff" }}
               onClick={() => avatarInputRef.current?.click()}
             >
               Change Avatar
             </Button>
             {(currentUser.avatar_url || avatarPreview) && (
-              <Button size="small" theme="borderless" style={{ color: "#f23f43" }} onClick={handleRemoveAvatar}>
-                Remove
+              <Button size="small" theme="borderless" style={{ color: "var(--status-danger)" }} onClick={handleRemoveAvatar}>
+                Remove Avatar
               </Button>
             )}
           </div>
         </div>
-      </div>
 
-      {/* Display Name */}
-      <div className="settings-card" style={{ padding: 24 }}>
-        <div className="settings-card__label" style={{ marginBottom: 8 }}>Display Name</div>
-        {editingName ? (
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <Input
-              value={displayName}
-              onChange={setDisplayName}
-              style={{ flex: 1, backgroundColor: "#1e1f22", borderColor: "#3f4147", color: "#e0e1e5" }}
-              maxLength={64}
-              autoFocus
-              onKeyDown={(e) => e.key === "Enter" && handleSaveDisplayName()}
-            />
+        {/* Banner */}
+        <div className="settings-card" style={{ padding: 24 }}>
+          <div className="settings-card__label" style={{ marginBottom: 12 }}>Banner</div>
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
             <Button
               size="small"
-              style={{ background: "#6b9362", borderColor: "#6b9362", color: "#fff" }}
-              loading={saving}
-              onClick={handleSaveDisplayName}
+              style={{ background: "var(--brand-experiment)", borderColor: "var(--brand-experiment)", color: "#fff" }}
+              onClick={() => bannerInputRef.current?.click()}
             >
-              Save
+              Change Banner
             </Button>
-            <Button size="small" theme="borderless" style={{ color: "#b5bac1" }} onClick={() => { setEditingName(false); setDisplayName(currentUser.display_name || ""); }}>
-              Cancel
-            </Button>
+            {(currentUser.banner_url || bannerPreview) && (
+              <Button size="small" theme="borderless" style={{ color: "var(--status-danger)" }} onClick={handleRemoveBanner}>
+                Remove Banner
+              </Button>
+            )}
           </div>
-        ) : (
-          <div className="settings-card__info-row" style={{ padding: 0, border: "none" }}>
-            <div className="settings-card__value">{currentUser.display_name || currentUser.username}</div>
-            <Button size="small" theme="light" onClick={() => setEditingName(true)}>Edit</Button>
-          </div>
-        )}
-      </div>
-
-      {/* Status */}
-      <div className="settings-card" style={{ padding: 24 }}>
-        <div className="settings-card__label" style={{ marginBottom: 12 }}>Status</div>
-        <div className="profile-status-options">
-          {(["online", "idle", "dnd", "offline"] as const).map((s) => (
-            <div
-              key={s}
-              className={`profile-status-option ${status === s ? "profile-status-option--active" : ""}`}
-              onClick={() => setStatus(s)}
-            >
-              <span className="profile-status-option__dot" style={{ backgroundColor: STATUS_LABELS[s].color }} />
-              <span className="profile-status-option__label">{STATUS_LABELS[s].label}</span>
-            </div>
-          ))}
         </div>
 
-        {/* Status message (not for DND/offline) */}
-        {(status === "online" || status === "idle") && (
-          <div style={{ marginTop: 16 }}>
-            <div className="settings-card__label" style={{ marginBottom: 8 }}>Custom Status Message</div>
-            <Input
-              value={statusMessage}
-              onChange={setStatusMessage}
-              placeholder="What are you up to?"
-              maxLength={128}
-              style={{ backgroundColor: "#1e1f22", borderColor: "#3f4147", color: "#e0e1e5" }}
-            />
+        {/* Status */}
+        <div className="settings-card" style={{ padding: 24 }}>
+          <div className="settings-card__label" style={{ marginBottom: 12 }}>Status</div>
+          <div className="profile-status-options">
+            {(["online", "idle", "dnd", "offline"] as const).map((s) => (
+              <div
+                key={s}
+                className={`profile-status-option ${status === s ? "profile-status-option--active" : ""}`}
+                onClick={() => setStatus(s)}
+              >
+                <span className="profile-status-option__dot" style={{ backgroundColor: STATUS_LABELS[s].color }} />
+                <span className="profile-status-option__label">{STATUS_LABELS[s].label}</span>
+              </div>
+            ))}
           </div>
-        )}
 
-        <div style={{ marginTop: 16 }}>
-          <Button
-            style={{ background: "#6b9362", borderColor: "#6b9362", color: "#fff" }}
-            loading={saving}
-            onClick={handleSaveStatus}
-          >
-            Save Status
-          </Button>
+          {/* Status message (not for DND/offline) */}
+          {(status === "online" || status === "idle") && (
+            <div style={{ marginTop: 16 }}>
+              <div className="settings-card__label" style={{ marginBottom: 8 }}>Custom Status Message</div>
+              <Input
+                value={statusMessage}
+                onChange={setStatusMessage}
+                placeholder="What are you up to?"
+                maxLength={128}
+                style={{ backgroundColor: "var(--proteus-settings-surface-strong)", borderColor: "var(--proteus-settings-border)", color: "var(--header-primary)" }}
+              />
+            </div>
+          )}
+
+          <div style={{ marginTop: 16 }}>
+            <Button
+              style={{ background: "var(--brand-experiment)", borderColor: "var(--brand-experiment)", color: "#fff" }}
+              loading={saving}
+              onClick={handleSaveStatus}
+            >
+              Save Status
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Right column — live preview */}
+      <div className="profile-settings-layout__preview">
+        <div className="settings-card__label" style={{ marginBottom: 12 }}>Preview</div>
+        <div className="profile-preview-card">
+          <div
+            className="profile-preview-card__banner"
+            style={bannerUrl ? { backgroundImage: `url(${bannerUrl})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
+          />
+          <div className="profile-preview-card__body">
+            <div className="profile-preview-card__avatar-row">
+              {avatarUrl ? (
+                <Avatar src={avatarUrl} style={{ width: 56, height: 56 }} />
+              ) : (
+                <Avatar style={{ backgroundColor: "var(--semi-color-primary-light-default)", color: "var(--header-primary)", width: 56, height: 56, fontSize: 22 }}>
+                  {currentUser.username[0].toUpperCase()}
+                </Avatar>
+              )}
+              <span className="profile-preview-card__status-dot" style={{ backgroundColor: previewStatus.color }} />
+            </div>
+            <div className="profile-preview-card__name">{previewName}</div>
+            <div className="profile-preview-card__username">{currentUser.username}</div>
+            {statusMessage && (status === "online" || status === "idle") && (
+              <div className="profile-preview-card__status-msg">{statusMessage}</div>
+            )}
+          </div>
         </div>
       </div>
     </div>
   );
 };
 
-/** Inject or remove custom theme CSS in the document head. */
-function applyThemeCss(css: string | null) {
-  const id = "bergamot-custom-theme";
-  let el = document.getElementById(id) as HTMLStyleElement | null;
-  if (!css) {
-    el?.remove();
-    return;
-  }
-  if (!el) {
-    el = document.createElement("style");
-    el.id = id;
-    document.head.appendChild(el);
-  }
-  el.textContent = css;
-}
-
-const THEME_NAME_KEY = "bergamot_selected_theme";
-const THEME_CSS_KEY = "bergamot_theme_css";
-const BASE_THEME_KEY = "bergamot_base_theme";
-
-type BaseTheme = "dark" | "light";
-
-/** Apply a base theme class to <html> and <body> for BD theme `:is(.theme-dark, ...)` selectors. */
-function applyBaseTheme(theme: BaseTheme) {
-  const classes = ["theme-dark", "theme-light"];
-  const root = document.documentElement;
-  const body = document.body;
-  classes.forEach((c) => {
-    root.classList.remove(c);
-    body.classList.remove(c);
-  });
-  root.classList.add(`theme-${theme}`);
-  body.classList.add(`theme-${theme}`);
-  localStorage.setItem(BASE_THEME_KEY, theme);
-}
-
-function getBaseTheme(): BaseTheme {
-  return (localStorage.getItem(BASE_THEME_KEY) as BaseTheme) || "dark";
-}
-
-/** Whether the Electron preload bridge is available (false in pure browser dev). */
-const hasBridge = typeof window.bergamot?.getAvailableThemes === "function";
-
 const AppearanceSettings: React.FC = () => {
-  const [themes, setThemes] = useState<string[]>([]);
-  const [activeTheme, setActiveTheme] = useState<string | null>(
-    localStorage.getItem(THEME_NAME_KEY)
-  );
-  const [baseTheme, setBaseThemeState] = useState<BaseTheme>(getBaseTheme);
+  const [themes, setThemes] = useState<string[]>(getRuntimeThemes());
+  const [activeTheme, setActiveTheme] = useState<string | null>(getThemeRuntimeState().activeTheme);
+  const [baseTheme, setBaseThemeState] = useState<BaseTheme>(getStoredBaseTheme);
+  const [themePreviews, setThemePreviews] = useState<ThemePreviewOption[]>([]);
   const [loading, setLoading] = useState(true);
-  const [themesPath, setThemesPath] = useState(hasBridge ? "Loading path..." : "Not available outside Electron");
-
-  // Apply base theme class on mount & when changed
-  React.useEffect(() => {
-    applyBaseTheme(baseTheme);
-  }, [baseTheme]);
+  const [previewLoading, setPreviewLoading] = useState(true);
+  const [themesPath, setThemesPath] = useState(hasThemeBridge() ? "Loading path..." : "Not available outside Electron");
 
   const handleBaseTheme = useCallback((t: BaseTheme) => {
     setBaseThemeState(t);
-    applyBaseTheme(t);
+    void setRuntimeBaseTheme(t).catch((err: Error) => {
+      Toast.error({ content: err.message || "Failed to update theme mode", duration: 2 });
+    });
   }, []);
 
   const fetchThemes = useCallback(async () => {
-    if (!hasBridge) { setLoading(false); return; }
+    if (!hasThemeBridge()) {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
-      const list = await window.bergamot.getAvailableThemes();
+      await initializeThemeRuntime();
+      const list = await refreshThemeCatalog();
       setThemes(list);
     } catch {
       setThemes([]);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   React.useEffect(() => {
-    fetchThemes();
-    if (hasBridge) {
+    const stopCatalog = subscribeThemeCatalog((nextThemes) => {
+      setThemes(nextThemes);
+    });
+    const stopState = subscribeThemeState((state) => {
+      setActiveTheme(state.activeTheme);
+      setBaseThemeState(state.baseTheme);
+    });
+
+    void initializeThemeRuntime()
+      .then(() => refreshThemeCatalog())
+      .catch(() => setThemes([]))
+      .finally(() => setLoading(false));
+
+    if (hasThemeBridge()) {
       window.bergamot.getThemesPath().then(setThemesPath).catch(() => {});
     }
-  }, [fetchThemes]);
+
+    return () => {
+      stopCatalog();
+      stopState();
+    };
+  }, []);
+
+  React.useEffect(() => {
+    let cancelled = false;
+
+    if (!hasThemeBridge()) {
+      setThemePreviews([]);
+      setPreviewLoading(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setPreviewLoading(true);
+
+    void (async () => {
+      try {
+        const fallbackTokens = await getThemePreviewTokens(null, baseTheme);
+        const previewEntries = await Promise.all(
+          [null, ...themes].map(async (filename) => {
+            try {
+              const tokens = await getThemePreviewTokens(filename, baseTheme);
+              return {
+                filename,
+                label: formatThemeLabel(filename),
+                tokens,
+              };
+            } catch {
+              return {
+                filename,
+                label: formatThemeLabel(filename),
+                tokens: fallbackTokens,
+              };
+            }
+          }),
+        );
+
+        if (!cancelled) {
+          setThemePreviews(previewEntries);
+        }
+      } finally {
+        if (!cancelled) {
+          setPreviewLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [baseTheme, themes]);
 
   const selectTheme = useCallback(async (filename: string | null) => {
-    if (!filename) {
-      applyThemeCss(null);
-      localStorage.removeItem(THEME_NAME_KEY);
-      localStorage.removeItem(THEME_CSS_KEY);
-      setActiveTheme(null);
-      return;
-    }
-    if (!hasBridge) return;
+    if (!hasThemeBridge()) return;
     try {
-      const css = await window.bergamot.getThemeCss(filename);
-      applyThemeCss(css);
-      localStorage.setItem(THEME_NAME_KEY, filename);
-      localStorage.setItem(THEME_CSS_KEY, css);
-      setActiveTheme(filename);
+      await selectRuntimeTheme(filename);
     } catch (err: any) {
       Toast.error({ content: err.message || "Failed to load theme", duration: 2 });
     }
   }, []);
 
-  const handleSelectChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = e.target.value;
-    selectTheme(value === "" ? null : value);
-  }, [selectTheme]);
-
   return (
     <div>
-      {/* Base theme selector */}
+      {/* Theme section */}
       <div className="settings-card" style={{ padding: 24 }}>
-        <h3 style={{ color: "var(--header-primary)", marginBottom: 16 }}>Base Theme</h3>
-        <div style={{ display: "flex", gap: 12 }}>
-          {(["dark", "light"] as const).map((t) => (
-            <div
-              key={t}
-              className={`base-theme-btn ${baseTheme === t ? "base-theme-btn--active" : ""} base-theme-btn--${t}`}
-              onClick={() => handleBaseTheme(t)}
-            >
-              <PhIcon name={t === "dark" ? "moon" : "sun"} weight="fill" size={16} style={{ marginRight: 8 }} />
-              {t === "dark" ? "Dark" : "Light"}
-            </div>
-          ))}
+        <h3 style={{ color: "var(--header-primary)", marginBottom: 4 }}>Theme</h3>
+        <p style={{ color: "var(--text-muted)", fontSize: 13, marginBottom: 16 }}>
+          Adjust the color of the interface for better visibility.
+        </p>
+        <div className="theme-swatches">
+          <div
+            className={`theme-swatch ${baseTheme === "dark" ? "theme-swatch--active" : ""}`}
+            onClick={() => handleBaseTheme("dark")}
+          >
+            <div className="theme-swatch__preview theme-swatch__preview--dark" />
+            <span className="theme-swatch__label">Dark</span>
+          </div>
+          <div
+            className={`theme-swatch ${baseTheme === "light" ? "theme-swatch--active" : ""}`}
+            onClick={() => handleBaseTheme("light")}
+          >
+            <div className="theme-swatch__preview theme-swatch__preview--light" />
+            <span className="theme-swatch__label">Light</span>
+          </div>
         </div>
       </div>
 
       {/* BetterDiscord theme selector */}
       <div className="settings-card" style={{ padding: 24 }}>
-        <h3 style={{ color: "var(--header-primary)", marginBottom: 16 }}>BetterDiscord Themes</h3>
-
-        {!hasBridge ? (
-          <p style={{ color: "var(--text-muted)", fontSize: 13 }}>
-            Custom BetterDiscord themes are only available in the Bergamot desktop app.
-          </p>
-        ) : (
-          <>
-            <div className="settings-card__label" style={{ marginBottom: 8 }}>Select Theme</div>
-            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 16 }}>
-              <select
-                className="theme-select"
-                value={activeTheme || ""}
-                onChange={handleSelectChange}
-                disabled={loading}
-              >
-                <option value="">Default (None)</option>
-                {themes.map((filename) => (
-                  <option key={filename} value={filename}>
-                    {filename.replace(/\.css$/, "")}
-                  </option>
-                ))}
-              </select>
+        <div className="theme-gallery__header">
+          <div>
+            <h3 style={{ color: "var(--header-primary)", marginBottom: 8 }}>BetterDiscord Themes</h3>
+            <p className="theme-gallery__description">
+              Pick a theme from its palette preview. Proteus will hot reload if the selected file changes.
+            </p>
+          </div>
+          {hasThemeBridge() && (
+            <div className="theme-gallery__actions">
               <Button size="small" theme="borderless" style={{ color: "var(--text-normal)" }} onClick={fetchThemes}>
                 Refresh
               </Button>
-            </div>
-
-            {themes.length === 0 && !loading && (
-              <p style={{ color: "var(--text-muted)", fontSize: 13, marginBottom: 12 }}>
-                No themes found. Place <code>.css</code> files in your themes folder to get started.
-              </p>
-            )}
-
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
               <Button
                 size="small"
                 style={{ background: "var(--brand-experiment)", borderColor: "var(--brand-experiment)", color: "#fff" }}
@@ -604,6 +675,57 @@ const AppearanceSettings: React.FC = () => {
                 Open Themes Folder
               </Button>
             </div>
+          )}
+        </div>
+
+        {!hasThemeBridge() ? (
+          <p style={{ color: "var(--text-muted)", fontSize: 13 }}>
+            Custom BetterDiscord themes are only available in the Proteus desktop app.
+          </p>
+        ) : (
+          <>
+            <div className="settings-card__label" style={{ marginBottom: 10 }}>Choose Theme</div>
+            <div className="theme-gallery">
+              <div className="theme-gallery__grid">
+                {themePreviews.map((preview) => {
+                  const isActive = (preview.filename ?? null) === (activeTheme ?? null);
+
+                  return (
+                    <button
+                      key={preview.filename ?? "__proteus_default__"}
+                      type="button"
+                      className={`theme-thumbnail ${isActive ? "theme-thumbnail--active" : ""}`}
+                      style={buildThemePreviewStyle(preview.tokens)}
+                      onClick={() => { void selectTheme(preview.filename); }}
+                      aria-pressed={isActive}
+                      disabled={loading}
+                      title={preview.label}
+                    >
+                      <div className="theme-thumbnail__preview">
+                        <span className="theme-thumbnail__glow" />
+                        <span className="theme-thumbnail__topbar" />
+                        <span className="theme-thumbnail__panel" />
+                        <span className="theme-thumbnail__accent" />
+                        <span className="theme-thumbnail__line theme-thumbnail__line--primary" />
+                        <span className="theme-thumbnail__line theme-thumbnail__line--secondary" />
+                        <span className="theme-thumbnail__indicator" />
+                      </div>
+                      <span className="theme-thumbnail__label">{preview.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {previewLoading && (
+                <p className="theme-gallery__status">Refreshing theme previews…</p>
+              )}
+            </div>
+
+            {themes.length === 0 && !loading && !previewLoading && (
+              <p style={{ color: "var(--text-muted)", fontSize: 13, marginBottom: 12 }}>
+                No custom themes found yet. Proteus Default is still available above.
+              </p>
+            )}
 
             <p style={{ color: "var(--interactive-muted)", fontSize: 12, marginTop: 12 }}>
               Themes directory: <code style={{ color: "var(--text-muted)" }}>{themesPath}</code>
@@ -649,8 +771,8 @@ const ConnectionSettings: React.FC = () => {
   return (
     <div>
       <div className="settings-card" style={{ padding: 24 }}>
-        <h3 style={{ color: "#e0e1e5", marginBottom: 8 }}>Server Connection</h3>
-        <p style={{ color: "#80848e", fontSize: 13, marginBottom: 16 }}>
+        <h3 style={{ color: "var(--header-primary)", marginBottom: 8 }}>Server Connection</h3>
+        <p style={{ color: "var(--text-muted)", fontSize: 13, marginBottom: 16 }}>
           Configure which Bergamot backend server to connect to. The app will reload after changing.
         </p>
 
@@ -660,12 +782,12 @@ const ConnectionSettings: React.FC = () => {
             value={serverUrl}
             onChange={(v) => { setUrl(v); setSaved(false); }}
             placeholder="http://localhost:8000"
-            style={{ flex: 1, backgroundColor: "#1e1f22", borderColor: "#3f4147", color: "#e0e1e5" }}
+            style={{ flex: 1, backgroundColor: "var(--proteus-settings-surface-strong)", borderColor: "var(--proteus-settings-border)", color: "var(--header-primary)" }}
             onKeyDown={(e) => e.key === "Enter" && isDirty && handleSave()}
           />
           <Button
             size="small"
-            style={isDirty ? { background: "#6b9362", borderColor: "#6b9362", color: "#fff" } : {}}
+            style={isDirty ? { background: "var(--brand-experiment)", borderColor: "var(--brand-experiment)", color: "#fff" } : {}}
             disabled={!isDirty}
             onClick={handleSave}
           >
@@ -674,15 +796,15 @@ const ConnectionSettings: React.FC = () => {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 16 }}>
-          <Button size="small" theme="borderless" style={{ color: "#b5bac1" }} onClick={handleReset}>
+          <Button size="small" theme="borderless" style={{ color: "var(--text-normal)" }} onClick={handleReset}>
             Reset to Default (localhost:8000)
           </Button>
         </div>
 
-        <p style={{ color: "#5c5e66", fontSize: 12, marginTop: 16 }}>
-          API endpoint: <code style={{ color: "#80848e" }}>{currentUrl}/api/v1</code>
+        <p style={{ color: "var(--interactive-muted)", fontSize: 12, marginTop: 16 }}>
+          API endpoint: <code style={{ color: "var(--text-muted)" }}>{currentUrl}/api/v1</code>
           <br />
-          WebSocket: <code style={{ color: "#80848e" }}>ws://{(() => { try { return new URL(currentUrl).hostname; } catch { return "localhost"; } })()}:4000/socket</code>
+          WebSocket: <code style={{ color: "var(--text-muted)" }}>ws://{(() => { try { return new URL(currentUrl).hostname; } catch { return "localhost"; } })()}:4000/socket</code>
         </p>
       </div>
     </div>
@@ -692,15 +814,15 @@ const ConnectionSettings: React.FC = () => {
 const NotificationSettings: React.FC = () => (
   <div>
     <div className="settings-card" style={{ padding: 24 }}>
-      <h3 style={{ color: "#e0e1e5", marginBottom: 16 }}>Notification Preferences</h3>
+      <h3 style={{ color: "var(--header-primary)", marginBottom: 16 }}>Notification Preferences</h3>
       {[
         { label: "Enable Desktop Notifications", defaultChecked: true },
         { label: "Enable Message Sounds", defaultChecked: true },
         { label: "Show Unread Message Badge", defaultChecked: true },
         { label: "Notify on Mentions Only", defaultChecked: false },
       ].map((opt) => (
-        <div key={opt.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #35373c" }}>
-          <span style={{ color: "#b5bac1" }}>{opt.label}</span>
+        <div key={opt.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid var(--background-modifier-accent)" }}>
+          <span style={{ color: "var(--text-normal)" }}>{opt.label}</span>
           <Switch defaultChecked={opt.defaultChecked} />
         </div>
       ))}
@@ -711,14 +833,14 @@ const NotificationSettings: React.FC = () => (
 const ConnectionsPane: React.FC = () => (
   <div>
     <div className="settings-card" style={{ padding: 24 }}>
-      <h3 style={{ color: "#e0e1e5", marginBottom: 8 }}>Connect Your Accounts</h3>
-      <p style={{ color: "#80848e", marginBottom: 20 }}>Connect these accounts to enable integrations.</p>
+      <h3 style={{ color: "var(--header-primary)", marginBottom: 8 }}>Connect Your Accounts</h3>
+      <p style={{ color: "var(--text-muted)", marginBottom: 20 }}>Connect these accounts to enable integrations.</p>
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
         {["GitHub", "GitLab", "Spotify", "Steam", "Twitch"].map((svc) => (
           <Button
             key={svc}
             theme="light"
-            style={{ borderColor: "#3f4147" }}
+            style={{ borderColor: "var(--background-modifier-accent)" }}
           >
             {svc}
           </Button>
@@ -730,7 +852,7 @@ const ConnectionsPane: React.FC = () => (
 
 const PlaceholderPane: React.FC<{ title: string }> = ({ title }) => (
   <div className="settings-card" style={{ padding: 24 }}>
-    <h3 style={{ color: "#e0e1e5", marginBottom: 8 }}>{title}</h3>
-    <p style={{ color: "#80848e" }}>This section is under construction.</p>
+    <h3 style={{ color: "var(--header-primary)", marginBottom: 8 }}>{title}</h3>
+    <p style={{ color: "var(--text-muted)" }}>This section is under construction.</p>
   </div>
 );

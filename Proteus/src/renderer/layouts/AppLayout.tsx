@@ -1,13 +1,16 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Modal, Input, Toast, Select } from "@douyinfe/semi-ui";
 import { ServerList } from "../components/ServerList";
-import { ChannelList } from "../components/ChannelList";
+import { ChannelList, DmConversation } from "../components/ChannelList";
 import { ChatView } from "../components/ChatView";
 import { MessageInput } from "../components/MessageInput";
 import { MemberList } from "../components/MemberList";
 import { SettingsPanel } from "../components/SettingsPanel";
 import { ServerSettingsPanel } from "../components/ServerSettingsPanel";
 import { TypingIndicator, TypingUser } from "../components/TypingIndicator";
+import { GameletLibraryModal, GameletEntry } from "../components/GameletLibraryModal";
+import { GameletPlayer } from "../components/GameletPlayer";
+import { CallOverlay, CallState } from "../components/CallOverlay";
 import * as api from "../services/api";
 import { Permissions, hasPermission } from "../services/api";
 import * as socket from "../services/socket";
@@ -53,6 +56,30 @@ const MOCK_MEMBERS = [
   { id: "u-hermes", username: "Hermes", display_name: "Hermes", status: "offline" as const },
 ];
 
+const MOCK_DM_CONVERSATIONS: DmConversation[] = [
+  { id: "dm-1", userId: "u-artemis", username: "Artemis", displayName: "Artemis", status: "online", lastMessage: "Let me know if the gateway holds up" },
+  { id: "dm-2", userId: "u-hephaestus", username: "Hephaestus", displayName: "Hephaestus", status: "idle", lastMessage: "I pushed the fix last night" },
+  { id: "dm-3", userId: "u-athena", username: "Athena", displayName: "Athena", status: "online", lastMessage: "Architecture diagram is ready" },
+  { id: "dm-4", userId: "u-apollo", username: "Apollo", displayName: "Apollo", status: "dnd", lastMessage: "Proteus frontend almost done", unreadCount: 2 },
+  { id: "dm-5", userId: "u-hermes", username: "Hermes", displayName: "Hermes", status: "offline", lastMessage: "WebSocket gateway deployed" },
+];
+
+const MOCK_DM_MESSAGES: Record<string, MessagePayload[]> = {
+  "dm-1": [
+    { id: "dm-m1", content: "Hey, are you around? Need to check on the gateway.", sender_id: "0", channel_id: "dm-1", timestamp: "2025-06-14T08:30:00Z" },
+    { id: "dm-m2", content: "Yeah, I'm here. What's up?", sender_id: "u-artemis", channel_id: "dm-1", timestamp: "2025-06-14T08:31:00Z" },
+    { id: "dm-m3", content: "Just wanted to make sure the new routing config is stable.", sender_id: "0", channel_id: "dm-1", timestamp: "2025-06-14T08:32:00Z" },
+    { id: "dm-m4", content: "Let me know if the gateway holds up", sender_id: "u-artemis", channel_id: "dm-1", timestamp: "2025-06-14T08:35:00Z" },
+  ],
+  "dm-2": [
+    { id: "dm-m5", content: "The voice channel timeout issue should be fixed now.", sender_id: "u-hephaestus", channel_id: "dm-2", timestamp: "2025-06-14T07:00:00Z" },
+    { id: "dm-m6", content: "I pushed the fix last night", sender_id: "u-hephaestus", channel_id: "dm-2", timestamp: "2025-06-14T07:01:00Z" },
+  ],
+  "dm-3": [
+    { id: "dm-m7", content: "Architecture diagram is ready", sender_id: "u-athena", channel_id: "dm-3", timestamp: "2025-06-14T10:00:00Z" },
+  ],
+};
+
 // All permissions (used for mock mode / server owner)
 const ALL_PERMS = 0xFF;
 
@@ -80,6 +107,16 @@ export const AppLayout: React.FC<Props> = ({ currentUser, onLogout, onUserUpdate
   const [myPermissions, setMyPermissions] = useState<number>(ALL_PERMS);
   const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
   const typingTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const [showGameletLibrary, setShowGameletLibrary] = useState(false);
+  const [activeGamelet, setActiveGamelet] = useState<GameletEntry | null>(null);
+
+  // ── DM state ──
+  const [dmMode, setDmMode] = useState(false);
+  const [activeDmId, setActiveDmId] = useState<string | null>(null);
+  const [dmConversations] = useState<DmConversation[]>(MOCK_DM_CONVERSATIONS);
+
+  // ── Call state ──
+  const [callState, setCallState] = useState<CallState | null>(null);
 
   // Connect to Hermes on mount (graceful fallback)
   useEffect(() => {
@@ -123,7 +160,7 @@ export const AppLayout: React.FC<Props> = ({ currentUser, onLogout, onUserUpdate
 
   // Load channels + permissions when server changes
   useEffect(() => {
-    if (!activeServerId) return;
+    if (!activeServerId || dmMode) return;
     setChannels([]);
     setActiveChannelId(null);
     setMessages([]);
@@ -152,11 +189,18 @@ export const AppLayout: React.FC<Props> = ({ currentUser, onLogout, onUserUpdate
       const firstText = mockChs.find((c) => c.channel_type === "text");
       if (firstText) setActiveChannelId(firstText.id);
     });
-  }, [activeServerId, usingMockData]);
+  }, [activeServerId, usingMockData, dmMode]);
+
+  // Load DM messages when a DM conversation is selected
+  useEffect(() => {
+    if (!dmMode || !activeDmId) return;
+    // For now, use mock DM messages
+    setMessages(MOCK_DM_MESSAGES[activeDmId] || []);
+  }, [activeDmId, dmMode]);
 
   // Join channel when it changes — load history then subscribe to live messages
   useEffect(() => {
-    if (!activeChannelId) return;
+    if (!activeChannelId || dmMode) return;
 
     if (usingMockData) {
       setMessages(MOCK_MESSAGES.filter((m) => m.channel_id === activeChannelId));
@@ -234,7 +278,7 @@ export const AppLayout: React.FC<Props> = ({ currentUser, onLogout, onUserUpdate
       typingTimers.current.forEach((t) => clearTimeout(t));
       typingTimers.current.clear();
     };
-  }, [activeChannelId, usingMockData]);
+  }, [activeChannelId, usingMockData, dmMode]);
 
   // ── Handlers ──
 
@@ -244,7 +288,7 @@ export const AppLayout: React.FC<Props> = ({ currentUser, onLogout, onUserUpdate
   }, []);
 
   const handleDeleteMessage = useCallback(async (messageId: string) => {
-    if (usingMockData) {
+    if (usingMockData || dmMode) {
       setMessages((prev) => prev.filter((m) => m.id !== messageId));
       return;
     }
@@ -255,7 +299,7 @@ export const AppLayout: React.FC<Props> = ({ currentUser, onLogout, onUserUpdate
     } catch (err: any) {
       Toast.error({ content: err.message || "Failed to delete message", duration: 2 });
     }
-  }, [activeChannelId, usingMockData]);
+  }, [activeChannelId, usingMockData, dmMode]);
 
   const handleDeleteChannel = useCallback(async (channelId: string) => {
     if (!activeServerId) return;
@@ -303,8 +347,53 @@ export const AppLayout: React.FC<Props> = ({ currentUser, onLogout, onUserUpdate
     }
   }, [newChannelName, newChannelType, activeServerId]);
 
+  // ── DM handlers ──
+
+  const handleDmHome = useCallback(() => {
+    setDmMode(true);
+    setActiveChannelId(null);
+    setMessages([]);
+    // Select first DM if none selected
+    if (!activeDmId && dmConversations.length > 0) {
+      setActiveDmId(dmConversations[0].id);
+    }
+  }, [activeDmId, dmConversations]);
+
+  const handleSelectServer = useCallback((serverId: string) => {
+    setDmMode(false);
+    setActiveDmId(null);
+    setActiveServerId(serverId);
+  }, []);
+
+  const handleSelectDm = useCallback((dmId: string) => {
+    setActiveDmId(dmId);
+    setMessages(MOCK_DM_MESSAGES[dmId] || []);
+  }, []);
+
+  // ── Call handlers ──
+
+  const handleStartCall = useCallback((type: "voice" | "video") => {
+    if (!activeDmId) return;
+    const dm = dmConversations.find((d) => d.id === activeDmId);
+    if (!dm) return;
+    setCallState({
+      active: true,
+      type,
+      peerId: dm.userId,
+      peerName: dm.displayName,
+      peerAvatar: dm.avatarUrl,
+    });
+    Toast.info({ content: `Starting ${type} call with ${dm.displayName}...`, duration: 2 });
+  }, [activeDmId, dmConversations]);
+
+  const handleEndCall = useCallback(() => {
+    setCallState(null);
+    Toast.info({ content: "Call ended", duration: 1.5 });
+  }, []);
+
   const activeServer = servers.find((s) => s.id === activeServerId);
   const activeChannel = channels.find((c) => c.id === activeChannelId);
+  const activeDm = dmConversations.find((d) => d.id === activeDmId);
 
   const canManageChannels = hasPermission(myPermissions, Permissions.MANAGE_CHANNELS);
   const canManageMessages = hasPermission(myPermissions, Permissions.MANAGE_MESSAGES);
@@ -322,6 +411,19 @@ export const AppLayout: React.FC<Props> = ({ currentUser, onLogout, onUserUpdate
   for (const m of members) {
     userMap[m.id] = m.display_name || m.username;
   }
+  // Also add DM peer names to the map
+  for (const dm of dmConversations) {
+    userMap[dm.userId] = dm.displayName;
+  }
+
+  // Determine what to show in the chat area
+  const chatChannelName = dmMode
+    ? (activeDm?.displayName || "Direct Messages")
+    : (activeChannel?.name || "");
+
+  const chatChannelTopic = dmMode ? null : activeChannel?.topic;
+
+  const showChat = dmMode ? !!activeDmId : !!activeChannel;
 
   return (
     <div className="app-layout">
@@ -330,11 +432,31 @@ export const AppLayout: React.FC<Props> = ({ currentUser, onLogout, onUserUpdate
       <ServerList
         servers={servers}
         activeServerId={activeServerId}
-        onSelect={setActiveServerId}
+        dmMode={dmMode}
+        onSelect={handleSelectServer}
         onAdd={() => setShowAddServer(true)}
+        onDmHome={handleDmHome}
       />
 
-      {activeServer && (
+      {dmMode ? (
+        <ChannelList
+          serverName="Direct Messages"
+          serverId=""
+          channels={[]}
+          activeChannelId={null}
+          currentUser={currentUser}
+          onSelect={() => {}}
+          onOpenSettings={() => setShowSettings(true)}
+          dmMode
+          dmConversations={dmConversations}
+          activeDmId={activeDmId}
+          onSelectDm={handleSelectDm}
+          onNewDm={() => Toast.info({ content: "New DM coming soon!", duration: 2 })}
+          voiceConnected={!!callState}
+          voiceChannelName={callState ? `Call — ${callState.peerName}` : undefined}
+          onDisconnectVoice={handleEndCall}
+        />
+      ) : activeServer ? (
         <ChannelList
           serverName={activeServer.name}
           serverId={activeServer.id}
@@ -349,43 +471,100 @@ export const AppLayout: React.FC<Props> = ({ currentUser, onLogout, onUserUpdate
           canManageChannels={canManageChannels}
           canOpenServerSettings={canOpenServerSettings}
         />
-      )}
+      ) : null}
 
       <div className="chat-area">
-        {activeChannel ? (
+        {showChat ? (
           <>
             <ChatView
-              channelName={activeChannel.name}
-              channelTopic={activeChannel.topic}
+              channelName={chatChannelName}
+              channelTopic={chatChannelTopic}
               messages={messages}
               userMap={userMap}
               currentUserId={currentUser.id}
               onDeleteMessage={handleDeleteMessage}
               canManageMessages={canManageMessages}
+              isDm={dmMode}
+              onVoiceCall={() => handleStartCall("voice")}
+              onVideoCall={() => handleStartCall("video")}
             />
             <TypingIndicator typingUsers={typingUsers} />
             <MessageInput
-              channelId={activeChannel.id}
-              channelName={activeChannel.name}
+              channelId={dmMode ? (activeDmId || "") : (activeChannel?.id || "")}
+              channelName={chatChannelName}
               onMessageSent={handleMessageSent}
-              mockMode={usingMockData}
+              mockMode={usingMockData || dmMode}
               wsConnected={hermesConnected}
               senderId={currentUser.id}
               senderName={currentUser.display_name || currentUser.username}
+              onOpenGamelets={() => setShowGameletLibrary(true)}
             />
           </>
         ) : (
           <div className="chat-area__empty">
-            {servers.length === 0
-              ? "Create a server to get started"
-              : "Select a channel"}
+            {dmMode
+              ? "Select a conversation"
+              : servers.length === 0
+                ? "Create a server to get started"
+                : "Select a channel"}
           </div>
+        )}
+
+        {/* Gamelet overlay — positioned absolutely so it doesn't disturb flex layout.
+            Unmounting restores the chat area to its exact prior state. */}
+        {activeGamelet && (
+          <GameletPlayer
+            gameName={activeGamelet.name}
+            gameUrl={activeGamelet.url}
+            type={activeGamelet.type}
+            gamepadMapping={activeGamelet.gamepadMapping}
+            onLeave={() => setActiveGamelet(null)}
+          />
+        )}
+
+        {/* Call overlay — positioned absolutely over the chat area */}
+        {callState && (
+          <CallOverlay
+            call={callState}
+            onEnd={handleEndCall}
+          />
         )}
       </div>
 
-      {activeServer && (
+      {dmMode ? (
+        // In DM mode, show a user profile panel instead of member list
+        activeDm && (
+          <div className="dm-profile-sidebar">
+            <div className="dm-profile-sidebar__header">
+              <div className="dm-profile-sidebar__avatar-wrap">
+                {activeDm.avatarUrl ? (
+                  <img className="dm-profile-sidebar__avatar" src={activeDm.avatarUrl} alt="" />
+                ) : (
+                  <div className="dm-profile-sidebar__avatar dm-profile-sidebar__avatar--fallback">
+                    {activeDm.displayName[0].toUpperCase()}
+                  </div>
+                )}
+                <span className={`dm-profile-sidebar__status dm-profile-sidebar__status--${activeDm.status}`} />
+              </div>
+              <div className="dm-profile-sidebar__name">{activeDm.displayName}</div>
+              <div className="dm-profile-sidebar__username">{activeDm.username}</div>
+            </div>
+            <div className="dm-profile-sidebar__section">
+              <div className="dm-profile-sidebar__section-title">Member Since</div>
+              <div className="dm-profile-sidebar__section-content">Jan 1, 2025</div>
+            </div>
+            <div className="dm-profile-sidebar__section">
+              <div className="dm-profile-sidebar__section-title">Note</div>
+              <input
+                className="dm-profile-sidebar__note-input"
+                placeholder="Click to add a note"
+              />
+            </div>
+          </div>
+        )
+      ) : activeServer ? (
         <MemberList members={members} />
-      )}
+      ) : null}
 
       {/* Create Server Modal */}
       <Modal
@@ -396,7 +575,7 @@ export const AppLayout: React.FC<Props> = ({ currentUser, onLogout, onUserUpdate
         okText="Create"
         cancelText="Cancel"
         maskClosable={false}
-        style={{ backgroundColor: "#2B2D31" }}
+        style={{ backgroundColor: "var(--background-secondary)" }}
       >
         <Input
           value={newServerName}
@@ -416,7 +595,7 @@ export const AppLayout: React.FC<Props> = ({ currentUser, onLogout, onUserUpdate
         okText="Create"
         cancelText="Cancel"
         maskClosable={false}
-        style={{ backgroundColor: "#2B2D31" }}
+        style={{ backgroundColor: "var(--background-secondary)" }}
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <Input
@@ -459,6 +638,13 @@ export const AppLayout: React.FC<Props> = ({ currentUser, onLogout, onUserUpdate
           onClose={() => setShowServerSettings(false)}
         />
       )}
+
+      {/* Gamelet Library Modal */}
+      <GameletLibraryModal
+        visible={showGameletLibrary}
+        onClose={() => setShowGameletLibrary(false)}
+        onSelect={(g) => setActiveGamelet(g)}
+      />
     </div>
   );
 };

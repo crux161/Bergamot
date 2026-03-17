@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Input, Toast } from "@douyinfe/semi-ui";
 import { PhIcon } from "./PhIcon";
 import { sendMessage, sendTyping } from "../services/socket";
@@ -21,6 +21,8 @@ interface Props {
   senderId?: string;
   /** Display name to send with typing events */
   senderName?: string;
+  /** Open the Gamelet library modal */
+  onOpenGamelets?: () => void;
 }
 
 export const MessageInput: React.FC<Props> = ({
@@ -31,13 +33,28 @@ export const MessageInput: React.FC<Props> = ({
   wsConnected = false,
   senderId = "local",
   senderName,
+  onOpenGamelets,
 }) => {
   const [value, setValue] = useState("");
   const [sending, setSending] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [pendingPreviews, setPendingPreviews] = useState<string[]>([]);
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
   const lastTypingSent = useRef<number>(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const attachMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close attach menu on outside click
+  useEffect(() => {
+    if (!showAttachMenu) return;
+    const handleClick = (e: MouseEvent) => {
+      if (attachMenuRef.current && !attachMenuRef.current.contains(e.target as Node)) {
+        setShowAttachMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [showAttachMenu]);
 
   const addFiles = useCallback((files: FileList | File[]) => {
     const newFiles: File[] = [];
@@ -263,30 +280,73 @@ export const MessageInput: React.FC<Props> = ({
         onPaste={handlePaste as any}
         placeholder={`Message #${channelName}`}
         prefix={
-          <PhIcon
-            name="image"
-            style={{ cursor: "pointer", color: "#b5bac1" }}
-            onClick={() => fileInputRef.current?.click()}
-          />
+          <div className="attach-menu-anchor" ref={attachMenuRef}>
+            <div
+              className={`attach-menu__trigger ${showAttachMenu ? "attach-menu__trigger--active" : ""}`}
+              onClick={() => setShowAttachMenu((prev) => !prev)}
+            >
+              <PhIcon name="plus-circle" size={22} />
+            </div>
+
+            {showAttachMenu && (
+              <div className="attach-menu__popover">
+                <div
+                  className="attach-menu__item"
+                  onClick={() => {
+                    setShowAttachMenu(false);
+                    fileInputRef.current?.click();
+                  }}
+                >
+                  <PhIcon name="file" size={18} />
+                  <span>Upload a File</span>
+                </div>
+                <div
+                  className="attach-menu__item"
+                  onClick={() => {
+                    setShowAttachMenu(false);
+                    Toast.info({ content: "Threads coming soon", duration: 1.5 });
+                  }}
+                >
+                  <PhIcon name="chat-text" size={18} />
+                  <span>Create Thread</span>
+                </div>
+                <div
+                  className="attach-menu__item"
+                  onClick={() => {
+                    setShowAttachMenu(false);
+                    Toast.info({ content: "Polls coming soon", duration: 1.5 });
+                  }}
+                >
+                  <PhIcon name="chart-bar" size={18} />
+                  <span>Create Poll</span>
+                </div>
+                {onOpenGamelets && (
+                  <div
+                    className="attach-menu__item"
+                    onClick={() => {
+                      setShowAttachMenu(false);
+                      onOpenGamelets();
+                    }}
+                  >
+                    <PhIcon name="circles-four" size={18} />
+                    <span>Use Apps</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         }
         suffix={
           <PhIcon
             name="paper-plane-right"
             weight="fill"
-            style={{
-              cursor: canSend ? "pointer" : "default",
-              color: canSend ? "#6b9362" : "#5c5e66",
-            }}
+            className={canSend ? "message-input__send--active" : "message-input__send--muted"}
+            style={{ cursor: canSend ? "pointer" : "default" }}
             onClick={handleSend}
           />
         }
         size="large"
-        style={{
-          backgroundColor: "#383a40",
-          borderColor: "#3f4147",
-          color: "#e0e1e5",
-          borderRadius: 8,
-        }}
+        className="message-input__field"
       />
     </div>
   );

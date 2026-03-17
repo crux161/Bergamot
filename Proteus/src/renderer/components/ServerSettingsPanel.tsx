@@ -125,15 +125,15 @@ const OverviewPane: React.FC<{ server: ServerRead; currentUser: UserRead }> = ({
 }) => (
   <div className="settings-card" style={{ padding: 24 }}>
     <div style={{ display: "flex", gap: 20, alignItems: "center", marginBottom: 24 }}>
-      <Avatar size="extra-large" style={{ backgroundColor: "#3d5d42", color: "#e0e1e5", width: 80, height: 80, fontSize: 32 }}>
+      <Avatar size="extra-large" style={{ backgroundColor: "var(--semi-color-primary-light-default)", color: "var(--header-primary)", width: 80, height: 80, fontSize: 32 }}>
         {server.name[0]?.toUpperCase()}
       </Avatar>
       <div>
-        <div style={{ color: "#e0e1e5", fontSize: 20, fontWeight: 600 }}>{server.name}</div>
-        <div style={{ color: "#80848e", fontSize: 13, marginTop: 4 }}>
+        <div style={{ color: "var(--header-primary)", fontSize: 20, fontWeight: 600 }}>{server.name}</div>
+        <div style={{ color: "var(--text-muted)", fontSize: 13, marginTop: 4 }}>
           Owner: {currentUser.display_name || currentUser.username}
         </div>
-        <div style={{ color: "#80848e", fontSize: 13, marginTop: 2 }}>
+        <div style={{ color: "var(--text-muted)", fontSize: 13, marginTop: 2 }}>
           Created {new Date(server.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
         </div>
       </div>
@@ -272,7 +272,7 @@ const RolesEditor: React.FC<RolesEditorProps> = ({ serverId, roles, members, onC
           <span>Roles — {roles.length}</span>
           <PhIcon
             name="plus"
-            style={{ cursor: "pointer", color: "#b5bac1" }}
+            style={{ cursor: "pointer", color: "var(--text-normal)" }}
             onClick={handleCreateRole}
           />
         </div>
@@ -296,13 +296,13 @@ const RolesEditor: React.FC<RolesEditorProps> = ({ serverId, roles, members, onC
         {selectedRole ? (
           <>
             <div className="roles-editor__detail-header">
-              <span style={{ fontWeight: 600, fontSize: 16, color: "#e0e1e5" }}>
+              <span style={{ fontWeight: 600, fontSize: 16, color: "var(--header-primary)" }}>
                 Edit Role — {selectedRole.name.toUpperCase()}
               </span>
               {!selectedRole.is_default && (
                 <PhIcon
                   name="trash"
-                  style={{ cursor: "pointer", color: "#f23f43" }}
+                  style={{ cursor: "pointer", color: "var(--status-danger)" }}
                   onClick={handleDeleteRole}
                 />
               )}
@@ -330,7 +330,7 @@ const RolesEditor: React.FC<RolesEditorProps> = ({ serverId, roles, members, onC
                     value={editName}
                     onChange={(v) => { setEditName(v); setDirty(true); }}
                     disabled={selectedRole.is_default}
-                    style={{ backgroundColor: "#1e1f22", borderColor: "#3f4147", color: "#e0e1e5" }}
+                    style={{ backgroundColor: "var(--input-background)", borderColor: "var(--background-modifier-accent)", color: "var(--header-primary)" }}
                   />
                 </div>
                 <div className="roles-editor__field">
@@ -376,13 +376,13 @@ const RolesEditor: React.FC<RolesEditorProps> = ({ serverId, roles, members, onC
                       Members with this role ({roleMembers.length})
                     </div>
                     {roleMembers.length === 0 && (
-                      <div style={{ color: "#80848e", fontSize: 13, marginBottom: 16 }}>
+                      <div style={{ color: "var(--text-muted)", fontSize: 13, marginBottom: 16 }}>
                         No members have this role yet.
                       </div>
                     )}
                     {roleMembers.map((m) => (
                       <div key={m.id} className="roles-editor__member-row">
-                        <Avatar size="small" style={{ backgroundColor: "#3d5d42", color: "#e0e1e5" }}>
+                        <Avatar size="small" style={{ backgroundColor: "var(--semi-color-primary-light-default)", color: "var(--header-primary)" }}>
                           {(m.display_name || m.username)[0]?.toUpperCase()}
                         </Avatar>
                         <span className="roles-editor__member-name">
@@ -404,7 +404,7 @@ const RolesEditor: React.FC<RolesEditorProps> = ({ serverId, roles, members, onC
                     </div>
                     {availableMembers.map((m) => (
                       <div key={m.id} className="roles-editor__member-row">
-                        <Avatar size="small" style={{ backgroundColor: "#3d5d42", color: "#e0e1e5" }}>
+                        <Avatar size="small" style={{ backgroundColor: "var(--semi-color-primary-light-default)", color: "var(--header-primary)" }}>
                           {(m.display_name || m.username)[0]?.toUpperCase()}
                         </Avatar>
                         <span className="roles-editor__member-name">
@@ -413,7 +413,7 @@ const RolesEditor: React.FC<RolesEditorProps> = ({ serverId, roles, members, onC
                         <Button
                           size="small"
                           theme="borderless"
-                          style={{ color: "#6b9362" }}
+                          style={{ color: "var(--brand-experiment)" }}
                           onClick={() => handleAssignMember(m.id)}
                         >
                           Add
@@ -423,7 +423,7 @@ const RolesEditor: React.FC<RolesEditorProps> = ({ serverId, roles, members, onC
                   </>
                 )}
                 {selectedRole.is_default && (
-                  <div style={{ color: "#80848e", fontSize: 13 }}>
+                  <div style={{ color: "var(--text-muted)", fontSize: 13 }}>
                     The @everyone role applies to all server members automatically.
                   </div>
                 )}
@@ -433,15 +433,15 @@ const RolesEditor: React.FC<RolesEditorProps> = ({ serverId, roles, members, onC
             {/* Save bar */}
             {dirty && (
               <div className="save-bar">
-                <span style={{ color: "#e0e1e5", fontSize: 14 }}>
+                <span style={{ color: "var(--header-primary)", fontSize: 14 }}>
                   Careful — you have unsaved changes!
                 </span>
                 <div style={{ display: "flex", gap: 8 }}>
-                  <Button theme="borderless" style={{ color: "#b5bac1" }} onClick={handleReset}>
+                  <Button theme="borderless" style={{ color: "var(--text-normal)" }} onClick={handleReset}>
                     Reset
                   </Button>
                   <Button
-                    style={{ background: "#6b9362", borderColor: "#6b9362", color: "#fff" }}
+                    style={{ background: "var(--brand-experiment)", borderColor: "var(--brand-experiment)", color: "#fff" }}
                     onClick={handleSave}
                   >
                     Save Changes
@@ -451,7 +451,7 @@ const RolesEditor: React.FC<RolesEditorProps> = ({ serverId, roles, members, onC
             )}
           </>
         ) : (
-          <div style={{ color: "#80848e", padding: 40, textAlign: "center" }}>
+          <div style={{ color: "var(--text-muted)", padding: 40, textAlign: "center" }}>
             Select a role to edit, or create a new one.
           </div>
         )}

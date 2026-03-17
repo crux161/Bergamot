@@ -1,5 +1,6 @@
 const path = require("path");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
+const CopyWebpackPlugin = require("copy-webpack-plugin");
 
 module.exports = {
   mode: "development",
@@ -58,13 +59,19 @@ module.exports = {
     new HtmlWebpackPlugin({
       template: "./src/renderer/index.html",
     }),
+    new CopyWebpackPlugin({
+      patterns: [
+        { from: "public", to: ".", noErrorOnMissing: true },
+      ],
+    }),
   ],
   devServer: {
     port: 3000,
     hot: true,
-    static: {
-      directory: path.resolve(__dirname, "dist/renderer"),
-    },
+    static: [
+      { directory: path.resolve(__dirname, "dist/renderer") },
+      { directory: path.resolve(__dirname, "public"), publicPath: "/" },
+    ],
     client: {
       overlay: {
         errors: true,

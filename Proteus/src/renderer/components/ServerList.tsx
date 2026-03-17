@@ -6,8 +6,10 @@ import type { ServerRead } from "../services/api";
 interface Props {
   servers: ServerRead[];
   activeServerId: string | null;
+  dmMode?: boolean;
   onSelect: (id: string) => void;
   onAdd: () => void;
+  onDmHome?: () => void;
 }
 
 function serverInitials(name: string): string {
@@ -22,16 +24,30 @@ function serverInitials(name: string): string {
 export const ServerList: React.FC<Props> = ({
   servers,
   activeServerId,
+  dmMode = false,
   onSelect,
   onAdd,
+  onDmHome,
 }) => {
   return (
     <div className="server-list">
+      {/* Home / Direct Messages button */}
+      <Tooltip content="Direct Messages" position="right">
+        <div
+          className={`server-list__item server-list__home ${dmMode ? "server-list__item--active" : ""}`}
+          onClick={onDmHome}
+        >
+          <PhIcon name="chats-circle" size={24} weight="fill" />
+        </div>
+      </Tooltip>
+
+      <div className="server-list__divider" />
+
       {servers.map((s) => (
         <Tooltip key={s.id} content={s.name} position="right">
           <div
             className={`server-list__item ${
-              s.id === activeServerId ? "server-list__item--active" : ""
+              !dmMode && s.id === activeServerId ? "server-list__item--active" : ""
             }`}
             onClick={() => onSelect(s.id)}
           >

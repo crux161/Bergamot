@@ -10,9 +10,10 @@
 | Layer | File | Description |
 |-------|------|-------------|
 | Electron Main | `src/main/main.ts` | macOS `hiddenInset` titlebar, `.icns` icon, context-isolated renderer |
-| Theme | `src/renderer/styles/theme.ts` | 25 Japanese traditional colors mapped to semantic UI tokens |
+| Theme Runtime | `src/renderer/theme/runtime.ts` | Compiles selected BetterDiscord theme variables into Proteus runtime tokens |
+| Default Theme | `resources/Custom-Theming/ProteusDefault.theme.css` | Baseline Proteus dark and light token definitions |
 | Fonts | `src/renderer/styles/fonts.scss` | HarmonyOS Sans (Thin → Black) from `resources/` |
-| Global CSS | `src/renderer/styles/global.scss` | Semi Design CSS variable overrides, scrollbars, drag region |
+| Global CSS | `src/renderer/styles/global.scss` | Proteus token contract plus derived Semi/Discord aliases, scrollbars, drag region |
 | Layout | `src/renderer/styles/layout.scss` | Discord-style 4-panel grid (server rail / channels / chat / members) |
 | Components | `src/renderer/components/` | ServerList, ChannelList, ChatView, MessageInput, MemberList, LoginScreen |
 | API Client | `src/renderer/services/api.ts` | Full Janus REST client (auth, servers, channels) |

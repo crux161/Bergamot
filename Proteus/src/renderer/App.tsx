@@ -43,8 +43,8 @@ const App: React.FC = () => {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#1E1F22",
-          color: "#80848E",
+          background: "var(--background-tertiary)",
+          color: "var(--text-muted)",
           fontSize: 16,
         }}
       >

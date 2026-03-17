@@ -14,4 +14,14 @@ contextBridge.exposeInMainWorld("bergamot", {
   getThemeCss: (filename: string): Promise<string> => ipcRenderer.invoke("themes:read", filename),
   getThemesPath: (): Promise<string> => ipcRenderer.invoke("themes:getPath"),
   openThemesFolder: (): Promise<void> => ipcRenderer.invoke("themes:openFolder"),
+  onThemesChanged: (listener: (payload: { filename: string | null; themes: string[] }) => void) => {
+    const wrapped = (_event: Electron.IpcRendererEvent, payload: { filename: string | null; themes: string[] }) => {
+      listener(payload);
+    };
+    ipcRenderer.on("themes:changed", wrapped);
+    return () => ipcRenderer.removeListener("themes:changed", wrapped);
+  },
+
+  // Games
+  listGames: () => ipcRenderer.invoke("games:list"),
 });

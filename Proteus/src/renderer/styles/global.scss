@@ -7,153 +7,157 @@
   --semi-font-family: "HarmonyOS Sans", -apple-system, BlinkMacSystemFont,
     "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 
-  // Colors — override Semi's dark theme tokens
-  --semi-color-primary: #6b9362;
-  --semi-color-primary-hover: #5a8352;
-  --semi-color-primary-active: #4a7343;
-  --semi-color-primary-light-default: #3d5d42;
-  --semi-color-primary-light-hover: #2e4a3e;
-  --semi-color-primary-light-active: #2f3424;
+  // Default Proteus token fallbacks. The runtime theme adapter overrides these
+  // with compiled values derived from the selected CSS theme file.
+  --proteus-bg-0: #1e1f22;
+  --proteus-bg-1: #2b2d31;
+  --proteus-bg-2: #313338;
+  --proteus-bg-3: #383a40;
+  --proteus-bg-4: #404249;
 
-  --semi-color-bg-0: #1e1f22;
-  --semi-color-bg-1: #2b2d31;
-  --semi-color-bg-2: #313338;
-  --semi-color-bg-3: #383a40;
-  --semi-color-bg-4: #404249;
+  --proteus-text-0: #e0e1e5;
+  --proteus-text-1: #b5bac1;
+  --proteus-text-2: #80848e;
+  --proteus-text-3: #5c5e66;
 
-  --semi-color-fill-0: #383a40;
-  --semi-color-fill-1: #404249;
-  --semi-color-fill-2: #4e5058;
+  --proteus-accent: #6b9362;
+  --proteus-accent-hover: #5a8352;
+  --proteus-accent-active: #4a7343;
+  --proteus-accent-subtle: #3d5d42;
 
-  --semi-color-border: #3f4147;
+  --proteus-link: #6b9362;
+  --proteus-border: #3f4147;
+  --proteus-border-subtle: #35373c;
 
-  --semi-color-text-0: #e0e1e5;
-  --semi-color-text-1: #b5bac1;
-  --semi-color-text-2: #80848e;
-  --semi-color-text-3: #5c5e66;
+  --proteus-hover: rgba(79, 84, 92, 0.16);
+  --proteus-selected: rgba(79, 84, 92, 0.32);
+  --proteus-active: rgba(79, 84, 92, 0.48);
 
-  --semi-color-link: #6b9362;
-  --semi-color-link-hover: #5a8352;
-  --semi-color-link-active: #4a7343;
-  --semi-color-link-visited: #80848e;
+  --proteus-status-positive: #23a55a;
+  --proteus-status-warning: #f0b232;
+  --proteus-status-danger: #f23f43;
+  --proteus-status-offline: #80848e;
 
-  --semi-color-focus-border: #6b9362;
+  --proteus-scrollbar-thumb: #4e5058;
+  --proteus-scrollbar-track: #2b2d31;
+  --proteus-selection: #2e4a3e;
+  --proteus-mention: #3c4533;
+  --proteus-mention-bg: #2f3424;
 
-  // ── Discord / BetterDiscord CSS variable aliases ──
-  // BD themes override these at :root. Bergamot reads them as fallbacks
-  // so that loaded BD themes can influence Semi components and future
-  // code that references these variables.
+  // Opaque settings-shell surfaces intentionally stay solid even when a
+  // BetterDiscord theme uses transparent app backgrounds.
+  --proteus-settings-overlay: #111317;
+  --proteus-settings-nav: #1a1d22;
+  --proteus-settings-surface: #20242b;
+  --proteus-settings-surface-strong: #272c34;
+  --proteus-settings-border: rgba(255, 255, 255, 0.08);
 
-  // Backgrounds
-  --background-primary: var(--semi-color-bg-2);           // #313338 — main chat area
-  --background-secondary: var(--semi-color-bg-1);          // #2b2d31 — sidebars
-  --background-secondary-alt: var(--semi-color-bg-0);      // #1e1f22 — server list
-  --background-tertiary: var(--semi-color-bg-0);           // #1e1f22 — deepest
-  --background-floating: var(--semi-color-bg-3);           // #383a40 — modals, popovers
-  --background-modifier-hover: rgba(79, 84, 92, 0.16);
-  --background-modifier-selected: rgba(79, 84, 92, 0.32);
-  --background-modifier-active: rgba(79, 84, 92, 0.48);
+  // Semi Design tokens now derive from the normalized Proteus contract.
+  --semi-color-primary: var(--proteus-accent);
+  --semi-color-primary-hover: var(--proteus-accent-hover);
+  --semi-color-primary-active: var(--proteus-accent-active);
+  --semi-color-primary-light-default: var(--proteus-accent-subtle);
+  --semi-color-primary-light-hover: var(--proteus-hover);
+  --semi-color-primary-light-active: var(--proteus-selected);
 
-  // Text
-  --text-normal: var(--semi-color-text-1);                 // #b5bac1
-  --text-muted: var(--semi-color-text-2);                  // #80848e
-  --text-link: var(--semi-color-link);                     // #6b9362
-  --header-primary: var(--semi-color-text-0);              // #e0e1e5
-  --header-secondary: var(--semi-color-text-1);            // #b5bac1
+  --semi-color-bg-0: var(--proteus-bg-0);
+  --semi-color-bg-1: var(--proteus-bg-1);
+  --semi-color-bg-2: var(--proteus-bg-2);
+  --semi-color-bg-3: var(--proteus-bg-3);
+  --semi-color-bg-4: var(--proteus-bg-4);
 
-  // Interactive elements
-  --interactive-normal: var(--semi-color-text-1);          // #b5bac1
-  --interactive-hover: var(--semi-color-text-0);           // #e0e1e5
-  --interactive-active: var(--semi-color-text-0);          // #e0e1e5
-  --interactive-muted: var(--semi-color-text-3);           // #5c5e66
+  --semi-color-fill-0: var(--proteus-bg-3);
+  --semi-color-fill-1: var(--proteus-bg-4);
+  --semi-color-fill-2: var(--proteus-scrollbar-thumb);
 
-  // Input areas
-  --channeltextarea-background: var(--semi-color-fill-0);  // #383a40
-  --input-background: var(--semi-color-bg-0);              // #1e1f22
+  --semi-color-border: var(--proteus-border);
 
-  // Accent / brand
-  --brand-experiment: var(--semi-color-primary);            // #6b9362
-  --brand-experiment-560: var(--semi-color-primary-hover);  // #5a8352
+  --semi-color-text-0: var(--proteus-text-0);
+  --semi-color-text-1: var(--proteus-text-1);
+  --semi-color-text-2: var(--proteus-text-2);
+  --semi-color-text-3: var(--proteus-text-3);
 
-  // Borders & scrollbars
-  --background-modifier-accent: var(--semi-color-border);  // #3f4147
-  --scrollbar-thin-thumb: var(--semi-color-fill-2);        // #4e5058
+  --semi-color-link: var(--proteus-link);
+  --semi-color-link-hover: var(--proteus-accent-hover);
+  --semi-color-link-active: var(--proteus-accent-active);
+  --semi-color-link-visited: var(--proteus-text-2);
+
+  --semi-color-focus-border: var(--proteus-accent);
+
+  // Discord / BetterDiscord aliases flow from Proteus tokens too.
+  --background-primary: var(--proteus-bg-2);
+  --background-secondary: var(--proteus-bg-1);
+  --background-secondary-alt: var(--proteus-bg-0);
+  --background-tertiary: var(--proteus-bg-0);
+  --background-floating: var(--proteus-bg-3);
+  --background-modifier-hover: var(--proteus-hover);
+  --background-modifier-selected: var(--proteus-selected);
+  --background-modifier-active: var(--proteus-active);
+
+  --text-normal: var(--proteus-text-1);
+  --text-muted: var(--proteus-text-2);
+  --text-link: var(--proteus-link);
+  --header-primary: var(--proteus-text-0);
+  --header-secondary: var(--proteus-text-1);
+
+  --interactive-normal: var(--proteus-text-1);
+  --interactive-hover: var(--proteus-text-0);
+  --interactive-active: var(--proteus-text-0);
+  --interactive-muted: var(--proteus-text-3);
+
+  --channeltextarea-background: var(--proteus-bg-3);
+  --input-background: var(--proteus-bg-0);
+
+  --brand-experiment: var(--proteus-accent);
+  --brand-experiment-560: var(--proteus-accent-hover);
+
+  --background-modifier-accent: var(--proteus-border);
+  --scrollbar-thin-thumb: var(--proteus-scrollbar-thumb);
   --scrollbar-thin-track: transparent;
-  --scrollbar-auto-thumb: var(--semi-color-fill-2);
-  --scrollbar-auto-track: var(--semi-color-bg-1);
+  --scrollbar-auto-thumb: var(--proteus-scrollbar-thumb);
+  --scrollbar-auto-track: var(--proteus-scrollbar-track);
 
-  // Status colors (commonly referenced by BD themes)
-  --status-positive: #23a55a;
-  --status-warning: #f0b232;
-  --status-danger: #f23f43;
+  --status-positive: var(--proteus-status-positive);
+  --status-warning: var(--proteus-status-warning);
+  --status-danger: var(--proteus-status-danger);
 }
 
-// ── Light theme overrides ──
-// When .theme-light is on <html>, override the dark-first tokens.
 :root.theme-light {
-  --semi-color-primary: #5a8352;
-  --semi-color-primary-hover: #4a7343;
-  --semi-color-primary-active: #3d5d42;
-  --semi-color-primary-light-default: #d4e6cf;
-  --semi-color-primary-light-hover: #c0d9b8;
-  --semi-color-primary-light-active: #a8c8a0;
+  --proteus-bg-0: #e3e5e8;
+  --proteus-bg-1: #f2f3f5;
+  --proteus-bg-2: #ffffff;
+  --proteus-bg-3: #ebedef;
+  --proteus-bg-4: #d3d5d8;
 
-  --semi-color-bg-0: #e3e5e8;
-  --semi-color-bg-1: #f2f3f5;
-  --semi-color-bg-2: #ffffff;
-  --semi-color-bg-3: #e3e5e8;
-  --semi-color-bg-4: #ebedef;
+  --proteus-text-0: #060607;
+  --proteus-text-1: #313338;
+  --proteus-text-2: #5c5e66;
+  --proteus-text-3: #80848e;
 
-  --semi-color-fill-0: #e3e5e8;
-  --semi-color-fill-1: #ebedef;
-  --semi-color-fill-2: #d3d5d8;
+  --proteus-accent: #5a8352;
+  --proteus-accent-hover: #4a7343;
+  --proteus-accent-active: #3d5d42;
+  --proteus-accent-subtle: #d4e6cf;
 
-  --semi-color-border: #e3e5e8;
+  --proteus-link: #5a8352;
+  --proteus-border: #e3e5e8;
+  --proteus-border-subtle: #c7ccd1;
 
-  --semi-color-text-0: #060607;
-  --semi-color-text-1: #313338;
-  --semi-color-text-2: #5c5e66;
-  --semi-color-text-3: #80848e;
+  --proteus-hover: rgba(116, 127, 141, 0.08);
+  --proteus-selected: rgba(116, 127, 141, 0.16);
+  --proteus-active: rgba(116, 127, 141, 0.24);
 
-  --semi-color-link: #5a8352;
-  --semi-color-link-hover: #4a7343;
-  --semi-color-link-active: #3d5d42;
-  --semi-color-link-visited: #80848e;
+  --proteus-scrollbar-thumb: #c7ccd1;
+  --proteus-scrollbar-track: #f2f3f5;
+  --proteus-selection: #c0d9b8;
+  --proteus-mention: #d4e6cf;
+  --proteus-mention-bg: #e3efe0;
 
-  --semi-color-focus-border: #5a8352;
-
-  // Discord aliases (light)
-  --background-primary: #ffffff;
-  --background-secondary: #f2f3f5;
-  --background-secondary-alt: #ebedef;
-  --background-tertiary: #e3e5e8;
-  --background-floating: #ffffff;
-  --background-modifier-hover: rgba(116, 127, 141, 0.08);
-  --background-modifier-selected: rgba(116, 127, 141, 0.16);
-  --background-modifier-active: rgba(116, 127, 141, 0.24);
-
-  --text-normal: #313338;
-  --text-muted: #5c5e66;
-  --text-link: #5a8352;
-  --header-primary: #060607;
-  --header-secondary: #4e5058;
-
-  --interactive-normal: #4e5058;
-  --interactive-hover: #313338;
-  --interactive-active: #060607;
-  --interactive-muted: #c7ccd1;
-
-  --channeltextarea-background: #ebedef;
-  --input-background: #e3e5e8;
-
-  --brand-experiment: #5a8352;
-  --brand-experiment-560: #4a7343;
-
-  --background-modifier-accent: #e3e5e8;
-  --scrollbar-thin-thumb: #c7ccd1;
-  --scrollbar-thin-track: transparent;
-  --scrollbar-auto-thumb: #c7ccd1;
-  --scrollbar-auto-track: #f2f3f5;
+  --proteus-settings-overlay: #e9edf3;
+  --proteus-settings-nav: #f3f5f9;
+  --proteus-settings-surface: #ffffff;
+  --proteus-settings-surface-strong: #f6f8fb;
+  --proteus-settings-border: rgba(31, 35, 53, 0.10);
 }
 
 // ── Global reset ──
@@ -210,6 +214,6 @@ body,
 
 // Selection
 ::selection {
-  background: var(--semi-color-primary-light-default, #2e4a3e);
+  background: var(--proteus-selection, #2e4a3e);
   color: var(--header-primary, #e0e1e5);
 }

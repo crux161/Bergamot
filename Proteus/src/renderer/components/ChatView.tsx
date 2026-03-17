@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
+import { Tooltip } from "@douyinfe/semi-ui";
+import { PhIcon } from "./PhIcon";
 import type { MessagePayload, AttachmentPayload } from "../services/socket";
 
 /** Map of sender_id → display name for resolving usernames. */
@@ -16,6 +18,12 @@ interface Props {
   onDeleteMessage?: (messageId: string) => void;
   /** When true, user can delete any message (MANAGE_MESSAGES permission) */
   canManageMessages?: boolean;
+  /** Whether this is a DM view (shows call buttons) */
+  isDm?: boolean;
+  /** Called when user clicks voice call */
+  onVoiceCall?: () => void;
+  /** Called when user clicks video call */
+  onVideoCall?: () => void;
 }
 
 function formatTime(iso: string): string {
@@ -93,6 +101,9 @@ export const ChatView: React.FC<Props> = ({
   currentUserId,
   onDeleteMessage,
   canManageMessages = false,
+  isDm = false,
+  onVoiceCall,
+  onVideoCall,
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
@@ -205,10 +216,56 @@ export const ChatView: React.FC<Props> = ({
   return (
     <div className="chat-area">
       <div className="chat-area__header">
-        <span className="chat-area__header__name"># {channelName}</span>
+        <span className="chat-area__header__name">
+          {isDm ? (
+            <><PhIcon name="at" size={18} style={{ opacity: 0.6, marginRight: 4 }} />{channelName}</>
+          ) : (
+            <>{'# '}{channelName}</>
+          )}
+        </span>
         {channelTopic && (
           <span className="chat-area__header__topic">{channelTopic}</span>
         )}
+        <div className="chat-area__header__actions">
+          {isDm && (
+            <>
+              <Tooltip content="Start Voice Call" position="bottom">
+                <div className="chat-area__header__action-btn" onClick={onVoiceCall}>
+                  <PhIcon name="phone" size={20} />
+                </div>
+              </Tooltip>
+              <Tooltip content="Start Video Call" position="bottom">
+                <div className="chat-area__header__action-btn" onClick={onVideoCall}>
+                  <PhIcon name="video-camera" size={20} />
+                </div>
+              </Tooltip>
+              <div className="chat-area__header__divider" />
+            </>
+          )}
+          <Tooltip content={isDm ? "Pinned Messages" : "Pinned Messages  (Ctrl+P)"} position="bottom">
+            <div className="chat-area__header__action-btn">
+              <PhIcon name="push-pin" size={20} />
+            </div>
+          </Tooltip>
+          {isDm ? (
+            <Tooltip content="User Profile" position="bottom">
+              <div className="chat-area__header__action-btn">
+                <PhIcon name="user" size={20} />
+              </div>
+            </Tooltip>
+          ) : (
+            <Tooltip content="Member List  (Ctrl+M)" position="bottom">
+              <div className="chat-area__header__action-btn">
+                <PhIcon name="users" size={20} />
+              </div>
+            </Tooltip>
+          )}
+          <Tooltip content="Search  (Ctrl+F)" position="bottom">
+            <div className="chat-area__header__action-btn">
+              <PhIcon name="magnifying-glass" size={20} />
+            </div>
+          </Tooltip>
+        </div>
       </div>
 
       <div className="chat-area__messages" ref={scrollRef}>

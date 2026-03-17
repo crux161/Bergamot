@@ -23,6 +23,13 @@ declare module "*.icns" {
   export default src;
 }
 
+// ── Go WASM runtime (provided by wasm_exec.js) ──
+declare class Go {
+  importObject: WebAssembly.Imports;
+  run(instance: WebAssembly.Instance): Promise<void>;
+  exit(code: number): void;
+}
+
 interface Window {
   bergamot: {
     platform: string;
@@ -35,5 +42,25 @@ interface Window {
     getThemeCss: (filename: string) => Promise<string>;
     getThemesPath: () => Promise<string>;
     openThemesFolder: () => Promise<void>;
+    onThemesChanged: (listener: (payload: { filename: string | null; themes: string[] }) => void) => () => void;
+
+    // Games
+    listGames: () => Promise<
+      Array<{
+        id: string;
+        name: string;
+        icon: string;
+        url: string;
+        type: "wasm" | "iframe";
+        version: string;
+        description?: string;
+        cover?: string;
+        color?: string;
+        gamepadMapping?: {
+          buttons?: Record<number, string>;
+          axes?: Record<number, [string, string]>;
+        };
+      }>
+    >;
   };
 }

@@ -13,6 +13,9 @@ defmodule Hermes.Socket.UserSocket do
   # All "channel:<channel_id>" topics route to ChatChannel
   channel "channel:*", Hermes.Channels.ChatChannel
 
+  # Voice/video room signaling — "voice:<room_id>"
+  channel "voice:*", Hermes.Channels.VoiceChannel
+
   @doc """
   Authenticate the socket connection using a JWT token.
   The client passes it as: `new Socket("/socket", {params: {token: "..."}})`.

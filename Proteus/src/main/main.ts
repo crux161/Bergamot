@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell } from "electron";
+import { app, BrowserWindow, desktopCapturer, ipcMain, session, shell } from "electron";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -188,6 +188,83 @@ ipcMain.handle("games:list", async () => {
   return entries.sort((a, b) => a.name.localeCompare(b.name));
 });
 
+// ── Screen Share IPC (desktopCapturer → renderer picker → callback) ──
+
+// Holds the callback from setDisplayMediaRequestHandler until the renderer
+// resolves it by choosing a source or cancelling.
+let pendingScreenShareCallback:
+  | ((
+      stream: { video: object } | null,
+      error?: string,
+    ) => void)
+  | null = null;
+
+/**
+ * Electron intercepts getDisplayMedia() calls made by the renderer (i.e. by
+ * LiveKit's screen share button). Instead of the browser's native picker, we
+ * enumerate sources via desktopCapturer, serialize thumbnails as Data URLs,
+ * send them to React, and wait for the user to pick one.
+ */
+function setupScreenShareHandler(): void {
+  session.defaultSession.setDisplayMediaRequestHandler(
+    async (_request, callback) => {
+      try {
+        const sources = await desktopCapturer.getSources({
+          types: ["window", "screen"],
+          thumbnailSize: { width: 320, height: 180 },
+          fetchWindowIcons: true,
+        });
+
+        // Serialize NativeImage thumbnails into data URLs so the renderer can
+        // display them without needing access to native objects.
+        const serialized = sources.map((source) => ({
+          id: source.id,
+          name: source.name,
+          thumbnail: source.thumbnail.toDataURL(),
+          appIcon: source.appIcon?.isEmpty() ? null : source.appIcon?.toDataURL() ?? null,
+          display_id: source.display_id,
+        }));
+
+        // Store the callback — the renderer will resolve it via IPC
+        pendingScreenShareCallback = callback as any;
+
+        // Send sources to the renderer so it can show the picker UI
+        mainWindow?.webContents.send("screen-share:sources", serialized);
+      } catch (err) {
+        console.error("[ScreenShare] Failed to get sources:", err);
+        callback(null as any);
+      }
+    },
+  );
+}
+
+// The renderer calls this once the user picks a source (or cancels)
+ipcMain.on("screen-share:select", (_event, sourceId: string | null) => {
+  const cb = pendingScreenShareCallback;
+  pendingScreenShareCallback = null;
+
+  if (!cb) {
+    console.warn("[ScreenShare] No pending callback — ignoring selection");
+    return;
+  }
+
+  if (!sourceId) {
+    // User cancelled
+    cb(null);
+    return;
+  }
+
+  // Tell Chromium to capture the selected source
+  cb({
+    video: {
+      mandatory: {
+        chromeMediaSource: "desktop",
+        chromeMediaSourceId: sourceId,
+      },
+    },
+  } as any);
+});
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
@@ -228,6 +305,7 @@ function createWindow() {
 
 app.whenReady().then(createWindow);
 app.whenReady().then(startThemeWatchers);
+app.whenReady().then(setupScreenShareHandler);
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {

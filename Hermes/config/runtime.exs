@@ -17,7 +17,14 @@ if config_env() == :prod do
     http: [ip: {0, 0, 0, 0}, port: port],
     secret_key_base: secret_key_base
 
+  livekit_url = System.get_env("LIVEKIT_URL") || raise "LIVEKIT_URL not set"
+  livekit_api_key = System.get_env("LIVEKIT_API_KEY") || raise "LIVEKIT_API_KEY not set"
+  livekit_api_secret = System.get_env("LIVEKIT_API_SECRET") || raise "LIVEKIT_API_SECRET not set"
+
   config :hermes,
     jwt_secret: jwt_secret,
-    kafka_brokers: [{kafka_host, kafka_port}]
+    kafka_brokers: [{kafka_host, kafka_port}],
+    livekit_url: livekit_url,
+    livekit_api_key: livekit_api_key,
+    livekit_api_secret: livekit_api_secret
 end

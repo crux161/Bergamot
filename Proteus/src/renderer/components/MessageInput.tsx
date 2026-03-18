@@ -1,9 +1,12 @@
-import React, { useState, useCallback, useRef, useEffect } from "react";
+import React, { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { Input, Toast } from "@douyinfe/semi-ui";
 import { PhIcon } from "./PhIcon";
+import { EmojiPicker } from "./EmojiPicker";
 import { sendMessage, sendTyping } from "../services/socket";
 import { uploadFile, createMessage } from "../services/api";
 import type { MessagePayload, AttachmentPayload } from "../services/socket";
+import { searchEmojis, recordEmojiUsage, resolveShortcode } from "../data/emojiData";
+import type { EmojiEntry } from "../data/emojiData";
 
 const MAX_FILE_SIZE_MB = 10;
 
@@ -40,9 +43,12 @@ export const MessageInput: React.FC<Props> = ({
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [pendingPreviews, setPendingPreviews] = useState<string[]>([]);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [autocompleteIndex, setAutocompleteIndex] = useState(0);
   const lastTypingSent = useRef<number>(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const attachMenuRef = useRef<HTMLDivElement>(null);
+  const emojiAnchorRef = useRef<HTMLDivElement>(null);
 
   // Close attach menu on outside click
   useEffect(() => {
@@ -55,6 +61,36 @@ export const MessageInput: React.FC<Props> = ({
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, [showAttachMenu]);
+
+  // ── Emoji shortcode autocomplete ──
+
+  const autocompleteQuery = useMemo(() => {
+    // Match `:text` at the end of the input (at least 2 chars after the colon)
+    const match = value.match(/:([a-z0-9_]{2,})$/i);
+    return match ? match[1] : null;
+  }, [value]);
+
+  const autocompleteSuggestions = useMemo(() => {
+    if (!autocompleteQuery) return [];
+    return searchEmojis(autocompleteQuery, 8);
+  }, [autocompleteQuery]);
+
+  // Reset autocomplete index when suggestions change
+  useEffect(() => {
+    setAutocompleteIndex(0);
+  }, [autocompleteSuggestions]);
+
+  const applyAutocomplete = useCallback(
+    (entry: EmojiEntry) => {
+      // Replace the `:query` at end of input with the emoji character
+      const colonPos = value.lastIndexOf(":");
+      if (colonPos >= 0) {
+        setValue(value.slice(0, colonPos) + entry.emoji);
+      }
+      recordEmojiUsage(entry.shortcode);
+    },
+    [value],
+  );
 
   const addFiles = useCallback((files: FileList | File[]) => {
     const newFiles: File[] = [];
@@ -190,12 +226,44 @@ export const MessageInput: React.FC<Props> = ({
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
+      // Autocomplete navigation
+      if (autocompleteSuggestions.length > 0) {
+        if (e.key === "ArrowUp") {
+          e.preventDefault();
+          setAutocompleteIndex((prev) =>
+            prev <= 0 ? autocompleteSuggestions.length - 1 : prev - 1,
+          );
+          return;
+        }
+        if (e.key === "ArrowDown") {
+          e.preventDefault();
+          setAutocompleteIndex((prev) =>
+            prev >= autocompleteSuggestions.length - 1 ? 0 : prev + 1,
+          );
+          return;
+        }
+        if (e.key === "Tab" || (e.key === "Enter" && !e.shiftKey)) {
+          e.preventDefault();
+          applyAutocomplete(autocompleteSuggestions[autocompleteIndex]);
+          return;
+        }
+        if (e.key === "Escape") {
+          // Clear autocomplete by erasing the partial shortcode
+          e.preventDefault();
+          const colonPos = value.lastIndexOf(":");
+          if (colonPos >= 0) {
+            setValue(value.slice(0, colonPos));
+          }
+          return;
+        }
+      }
+
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         handleSend();
       }
     },
-    [handleSend]
+    [handleSend, autocompleteSuggestions, autocompleteIndex, applyAutocomplete, value]
   );
 
   const handlePaste = useCallback(
@@ -235,6 +303,14 @@ export const MessageInput: React.FC<Props> = ({
     e.stopPropagation();
   }, []);
 
+  const handleEmojiSelect = useCallback(
+    (emoji: string) => {
+      setValue((prev) => prev + emoji);
+      setShowEmojiPicker(false);
+    },
+    [],
+  );
+
   const canSend = value.trim() || pendingFiles.length > 0;
 
   return (
@@ -272,6 +348,23 @@ export const MessageInput: React.FC<Props> = ({
           e.target.value = "";
         }}
       />
+
+      {/* Emoji shortcode autocomplete dropdown */}
+      {autocompleteSuggestions.length > 0 && (
+        <div className="emoji-autocomplete">
+          {autocompleteSuggestions.map((entry, i) => (
+            <div
+              key={entry.shortcode}
+              className={`emoji-autocomplete__item ${i === autocompleteIndex ? "emoji-autocomplete__item--active" : ""}`}
+              onMouseEnter={() => setAutocompleteIndex(i)}
+              onClick={() => applyAutocomplete(entry)}
+            >
+              <span className="emoji-autocomplete__emoji">{entry.emoji}</span>
+              <span className="emoji-autocomplete__name">:{entry.shortcode}:</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       <Input
         value={value}
@@ -337,13 +430,29 @@ export const MessageInput: React.FC<Props> = ({
           </div>
         }
         suffix={
-          <PhIcon
-            name="paper-plane-right"
-            weight="fill"
-            className={canSend ? "message-input__send--active" : "message-input__send--muted"}
-            style={{ cursor: canSend ? "pointer" : "default" }}
-            onClick={handleSend}
-          />
+          <div className="message-input__suffix">
+            <div className="emoji-picker-anchor" ref={emojiAnchorRef}>
+              <div
+                className={`message-input__emoji-btn ${showEmojiPicker ? "message-input__emoji-btn--active" : ""}`}
+                onClick={() => setShowEmojiPicker((prev) => !prev)}
+              >
+                <PhIcon name="smiley" size={22} />
+              </div>
+              {showEmojiPicker && (
+                <EmojiPicker
+                  onSelect={handleEmojiSelect}
+                  onClose={() => setShowEmojiPicker(false)}
+                />
+              )}
+            </div>
+            <PhIcon
+              name="paper-plane-right"
+              weight="fill"
+              className={canSend ? "message-input__send--active" : "message-input__send--muted"}
+              style={{ cursor: canSend ? "pointer" : "default" }}
+              onClick={handleSend}
+            />
+          </div>
         }
         size="large"
         className="message-input__field"

@@ -44,6 +44,18 @@ interface Window {
     openThemesFolder: () => Promise<void>;
     onThemesChanged: (listener: (payload: { filename: string | null; themes: string[] }) => void) => () => void;
 
+    // Screen share picker (Electron desktopCapturer bridge)
+    onScreenShareRequested: (
+      listener: (sources: Array<{
+        id: string;
+        name: string;
+        thumbnail: string;
+        appIcon: string | null;
+        display_id: string;
+      }>) => void,
+    ) => () => void;
+    resolveScreenShare: (sourceId: string | null) => void;
+
     // Games
     listGames: () => Promise<
       Array<{

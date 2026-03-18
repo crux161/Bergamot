@@ -1,0 +1,26 @@
+# ─────────────────────────────────────────────────────────────────────
+# Apollo — LiveKit SFU configuration for Bergamot local development
+# ─────────────────────────────────────────────────────────────────────
+
+port: 7880
+
+rtc:
+  # UDP port range for WebRTC media (must match docker-compose port mapping)
+  port_range_start: 50000
+  port_range_end: 50200
+  # Use TCP fallback when UDP is blocked (behind strict firewalls)
+  tcp_port: 7881
+  # Disable STUN/TURN in local dev — all peers are on the same LAN
+  use_external_ip: false
+
+# API keys for token signing (dev-only — rotate these for production)
+keys:
+  bergamot_apollo_dev: "s3cr3t_ap0ll0_k3y_d0_n0t_us3_1n_pr0d"
+
+logging:
+  level: info
+
+# Room defaults
+room:
+  empty_timeout: 300       # close room after 5 min with no participants
+  max_participants: 50

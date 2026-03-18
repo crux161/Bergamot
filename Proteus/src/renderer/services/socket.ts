@@ -141,3 +141,77 @@ export function sendTyping(channelId: string, username?: string) {
     ch.push("typing", { username: username || "Someone" });
   }
 }
+
+// ── Voice channel helpers ──
+
+export type LiveKitTokenPayload = { token: string; url: string };
+export type PresenceState = Record<string, { metas: Array<{ username: string; joined_at: number }> }>;
+
+/**
+ * Join a voice room channel (`voice:<roomId>`) on the existing socket.
+ * Returns the Phoenix Channel instance so the caller can listen for events
+ * and leave when done.
+ */
+export function joinVoiceChannel(
+  roomId: string,
+  username: string,
+  onToken: (payload: LiveKitTokenPayload) => void,
+  onPresenceState?: (state: PresenceState) => void,
+  onPresenceDiff?: (diff: { joins: PresenceState; leaves: PresenceState }) => void,
+): Channel {
+  if (!socket) throw new Error("Socket not connected");
+
+  const topic = `voice:${roomId}`;
+
+  // Leave if already joined
+  const existing = activeChannels.get(topic);
+  if (existing) {
+    existing.leave();
+    activeChannels.delete(topic);
+  }
+
+  const channel = socket.channel(topic, { username });
+
+  channel.on("livekit_token", (payload: LiveKitTokenPayload) => {
+    onToken(payload);
+  });
+
+  if (onPresenceState) {
+    channel.on("presence_state", onPresenceState);
+  }
+
+  if (onPresenceDiff) {
+    channel.on("presence_diff", onPresenceDiff);
+  }
+
+  channel
+    .join()
+    .receive("ok", (resp) => {
+      console.log(`[Hermes] Joined ${topic}`, resp);
+    })
+    .receive("error", (resp) => {
+      console.error(`[Hermes] Failed to join ${topic}`, resp);
+    });
+
+  activeChannels.set(topic, channel);
+  return channel;
+}
+
+/** Leave a voice room channel. */
+export function leaveVoiceChannel(roomId: string) {
+  const topic = `voice:${roomId}`;
+  const ch = activeChannels.get(topic);
+  if (ch) {
+    ch.leave();
+    activeChannels.delete(topic);
+  }
+}
+
+/** Push a state event on the voice channel (mute, video, screen share). */
+export function pushVoiceEvent(roomId: string, event: string, payload: Record<string, any>) {
+  const topic = `voice:${roomId}`;
+  const ch = activeChannels.get(topic);
+  if (ch) {
+    ch.push(event, payload);
+  }
+}

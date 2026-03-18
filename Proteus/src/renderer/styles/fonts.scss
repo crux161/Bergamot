@@ -120,8 +120,19 @@
 .ph-users:before { content: "\e4d6"; }
 .ph-video-camera:before { content: "\e4da"; }
 .ph-video-camera-slash:before { content: "\e4dc"; }
+.ph-smiley:before { content: "\e436"; }
 .ph-x:before { content: "\e4f6"; }
 .ph-x-circle:before { content: "\e4f8"; }
+
+// ── Blobmoji (consistent cross-platform emoji rendering) ──
+
+@font-face {
+  font-family: "Blobmoji";
+  src: url("../../../resources/feature_requests/emojis/Blobmoji.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
 
 // ── DM Sans (Figma design system primary typeface) ──
 

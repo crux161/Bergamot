@@ -24,4 +24,33 @@ contextBridge.exposeInMainWorld("bergamot", {
 
   // Games
   listGames: () => ipcRenderer.invoke("games:list"),
+
+  // Screen share picker
+  onScreenShareRequested: (
+    listener: (sources: Array<{
+      id: string;
+      name: string;
+      thumbnail: string;
+      appIcon: string | null;
+      display_id: string;
+    }>) => void,
+  ) => {
+    const wrapped = (
+      _event: Electron.IpcRendererEvent,
+      sources: Array<{
+        id: string;
+        name: string;
+        thumbnail: string;
+        appIcon: string | null;
+        display_id: string;
+      }>,
+    ) => {
+      listener(sources);
+    };
+    ipcRenderer.on("screen-share:sources", wrapped);
+    return () => ipcRenderer.removeListener("screen-share:sources", wrapped);
+  },
+  resolveScreenShare: (sourceId: string | null) => {
+    ipcRenderer.send("screen-share:select", sourceId);
+  },
 });

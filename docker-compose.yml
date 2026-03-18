@@ -148,6 +148,27 @@ services:
       "
     restart: "no"
 
+  # ==========================================
+  # APOLLO: Voice & Video SFU (LiveKit)
+  # ==========================================
+
+  apollo:
+    image: livekit/livekit-server:latest
+    container_name: apollo
+    ports:
+      - "7880:7880"           # HTTP + WebSocket signaling
+      - "7881:7881/tcp"       # WebRTC TCP fallback
+      - "50000-50200:50000-50200/udp"   # WebRTC UDP media
+    volumes:
+      - ./Apollo/livekit.yaml:/etc/livekit.yaml:ro
+    command: --config /etc/livekit.yaml --dev
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:7880 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
 volumes:
   kafka_data:
   janus_data:

@@ -69,13 +69,10 @@ defmodule Hermes.Channels.ChatChannel do
     end
   end
 
-  @doc """
-  Broadcasts a typing indicator to other users in the channel.
-
-  Payload may include "username" from the client; we always
-  attach user_id from the authenticated socket assigns to prevent spoofing.
-  This is purely ephemeral — no persistence, no Kafka.
-  """
+  # Broadcasts a typing indicator to other users in the channel.
+  # Payload may include "username" from the client; we always
+  # attach user_id from the authenticated socket assigns to prevent spoofing.
+  # This is purely ephemeral — no persistence, no Kafka.
   def handle_in("typing", payload, socket) do
     broadcast_from!(socket, "typing", %{
       user_id: socket.assigns.user_id,

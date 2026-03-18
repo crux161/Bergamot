@@ -14,6 +14,8 @@ defmodule Hermes.Application do
     children = [
       Hermes.Telemetry,
       {Phoenix.PubSub, name: Hermes.PubSub},
+      # Presence tracker for voice rooms
+      Hermes.Presence,
       # Kafka producer client via brod
       %{
         id: :kafka_client,

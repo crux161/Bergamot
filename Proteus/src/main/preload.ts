@@ -1,5 +1,27 @@
 import { contextBridge, ipcRenderer } from "electron";
 
+interface TurtleSearchResult {
+  id: string;
+  title: string;
+  img: string;
+}
+
+interface TurtleEpisode {
+  epNum: number;
+  link: string;
+}
+
+interface TurtleSubtitle {
+  lang: string;
+  url: string;
+}
+
+interface TurtleStreamSource {
+  server: string;
+  url: string;
+  subs?: TurtleSubtitle[];
+}
+
 // Expose safe APIs to the renderer process
 contextBridge.exposeInMainWorld("bergamot", {
   platform: process.platform,
@@ -52,5 +74,14 @@ contextBridge.exposeInMainWorld("bergamot", {
   },
   resolveScreenShare: (sourceId: string | null) => {
     ipcRenderer.send("screen-share:select", sourceId);
+  },
+});
+
+contextBridge.exposeInMainWorld("api", {
+  scraper: {
+    search: (query: string): Promise<TurtleSearchResult[]> => ipcRenderer.invoke("scraper:search", query),
+    getEpisodes: (showId: string): Promise<TurtleEpisode[]> => ipcRenderer.invoke("scraper:getEpisodes", showId),
+    extractStreamUrl: (episodeLink: string): Promise<TurtleStreamSource[]> =>
+      ipcRenderer.invoke("scraper:extractStreamUrl", episodeLink),
   },
 });

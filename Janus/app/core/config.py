@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     """
     PROJECT_NAME: str = "Janus"
     API_V1_PREFIX: str = "/api/v1"
+    INSTANCE_NAME: str = "Bergamot"
+    INSTANCE_TAGLINE: str = "Polyglot communities, chat, and calls across the Bergamot ecosystem."
 
     # PostgreSQL
     POSTGRES_USER: str = "janus"
@@ -49,6 +51,46 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "CHANGE-ME-in-production-use-openssl-rand-hex-32"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+
+    # Public runtime endpoints
+    PUBLIC_BASE_URL: str | None = None
+    HERMES_PUBLIC_URL: str | None = None
+    HERMES_INTERNAL_URL: str | None = None
+    HERMES_INTERNAL_PUBLISH_URL: str | None = None
+    HERMES_INTERNAL_SECRET: str = "bergamot-hermes-internal-dev"
+    MEILISEARCH_ENABLED: bool = False
+    MEILISEARCH_URL: str | None = None
+    MEILISEARCH_API_KEY: str | None = None
+    MEILISEARCH_INDEX: str = "messages"
+    LIVEKIT_PUBLIC_URL: str | None = None
+    MEDIA_PUBLIC_URL: str | None = None
+    ADMIN_PUBLIC_URL: str | None = None
+    ADMIN_USERNAMES: str | None = None
+    ADMIN_EMAILS: str | None = None
+    ADMIN_USER_IDS: str | None = None
+    WEBAUTHN_RP_ID: str | None = None
+    WEBAUTHN_RP_NAME: str | None = None
+    WEBAUTHN_ALLOWED_ORIGINS: str | None = None
+    WEB_APP_URL: str = "http://localhost:3000"
+    EMAIL_FROM: str = "noreply@bergamot.local"
+    EMAIL_OUTBOX_DIR: str = "mail-outbox"
+    SMTP_HOST: str | None = None
+    SMTP_PORT: int = 465
+    SMTP_USERNAME: str | None = None
+    SMTP_PASSWORD: str | None = None
+    SMTP_USE_TLS: bool = False
+    SMTP_USE_STARTTLS: bool = False
+    AUTH_REQUIRE_EMAIL_VERIFICATION: bool = False
+    AUTH_AUTHORIZE_NEW_IPS: bool = False
+    AUTH_FLOW_EXPIRE_MINUTES: int = 60
+    AUTH_LOGIN_RATE_LIMIT: int = 10
+    AUTH_REGISTER_RATE_LIMIT: int = 5
+    AUTH_RESET_RATE_LIMIT: int = 5
+    AUTH_VERIFY_RATE_LIMIT: int = 5
+    AUTH_RATE_LIMIT_WINDOW_SECONDS: int = 300
+    AUTH_LOGIN_FAILURE_LIMIT: int = 5
+    AUTH_LOGIN_FAILURE_WINDOW_SECONDS: int = 900
+    AUTH_LOGIN_LOCKOUT_SECONDS: int = 900
 
     model_config = {"env_file": ".env", "extra": "ignore"}
 

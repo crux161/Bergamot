@@ -38,6 +38,7 @@ kafka:9092
 | `user.events` | 6 | Janus | Hermes, Heimdall | user_id |
 | `chat.messages` | 12 | Hermes | Thoth | channel_id |
 | `chat.activity` | 6 | Hermes, Proteus | Heimdall | user_id |
+| `bergamot.activity` | 6 | Janus | Heimdall, Mnemosyne | stream_id / user_id |
 | `voice.signaling` | 6 | Apollo | Hermes | room_id |
 
 ## Quick Start

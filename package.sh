@@ -1,4 +1,4 @@
 #!/bin/sh
 
-cd Protues
+cd Proteus
 npm run build && electron-forge package

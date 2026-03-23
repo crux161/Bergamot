@@ -30,7 +30,36 @@ declare class Go {
   exit(code: number): void;
 }
 
+interface TurtleSearchResult {
+  id: string;
+  title: string;
+  img: string;
+}
+
+interface TurtleEpisode {
+  epNum: number;
+  link: string;
+}
+
+interface TurtleSubtitle {
+  lang: string;
+  url: string;
+}
+
+interface TurtleStreamSource {
+  server: string;
+  url: string;
+  subs?: TurtleSubtitle[];
+}
+
 interface Window {
+  api?: {
+    scraper: {
+      search: (query: string) => Promise<TurtleSearchResult[]>;
+      getEpisodes: (showId: string) => Promise<TurtleEpisode[]>;
+      extractStreamUrl: (episodeLink: string) => Promise<TurtleStreamSource[]>;
+    };
+  };
   bergamot?: {
     platform: string;
     versions: {

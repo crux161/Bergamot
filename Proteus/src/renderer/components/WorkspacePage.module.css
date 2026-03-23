@@ -1,0 +1,285 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  height: 100%;
+  min-height: 0;
+  padding: 24px;
+  overflow: auto;
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--brand-experiment) 10%, transparent) 0%, transparent 28%),
+    color-mix(in srgb, var(--proteus-ui-surface-card) 98%, transparent);
+}
+
+.hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 24px;
+  border-radius: calc(var(--proteus-ui-radius-card) + 2px);
+  border: 1px solid color-mix(in srgb, var(--proteus-border) 72%, white 18%);
+  background: color-mix(in srgb, var(--proteus-ui-surface-card-strong) 92%, transparent);
+  box-shadow: var(--proteus-ui-shadow-card);
+}
+
+.heroCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.eyebrow {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+  color: var(--header-primary);
+}
+
+.description {
+  max-width: 620px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text-normal);
+}
+
+.heroAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 11px 16px;
+  border-radius: var(--radius-pill);
+  border: 1px solid color-mix(in srgb, var(--brand-experiment) 72%, white 12%);
+  background: linear-gradient(135deg, var(--brand-experiment), var(--brand-experiment-560));
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 10px 22px color-mix(in srgb, var(--brand-experiment) 22%, transparent);
+  transition: transform 0.14s ease, box-shadow 0.14s ease;
+}
+
+.heroAction:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 26px color-mix(in srgb, var(--brand-experiment) 28%, transparent);
+}
+
+.heroStatus {
+  flex-shrink: 0;
+  display: grid;
+  gap: 10px;
+  min-width: 180px;
+}
+
+.statusCard {
+  padding: 14px 16px;
+  border-radius: calc(var(--proteus-ui-radius-control) + 2px);
+  border: 1px solid color-mix(in srgb, var(--proteus-border) 68%, white 14%);
+  background: color-mix(in srgb, var(--proteus-ui-surface-pill) 92%, transparent);
+}
+
+.statusLabel {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.statusValue {
+  margin-top: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--header-primary);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.sectionTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--header-primary);
+}
+
+.sectionHint {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 132px;
+  padding: 18px;
+  border-radius: calc(var(--proteus-ui-radius-control) + 4px);
+  border: 1px solid color-mix(in srgb, var(--proteus-border) 70%, white 14%);
+  background: color-mix(in srgb, var(--proteus-ui-surface-card-strong) 90%, transparent);
+  cursor: pointer;
+  transition: transform 0.14s ease, border-color 0.14s ease, background 0.14s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--brand-experiment) 44%, var(--proteus-border) 56%);
+  background: color-mix(in srgb, var(--proteus-ui-surface-card-strong) 84%, white 16%);
+}
+
+.cardIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  color: var(--header-primary);
+  background: color-mix(in srgb, var(--brand-experiment) 18%, transparent);
+}
+
+.cardTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--header-primary);
+}
+
+.cardBody {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-normal);
+}
+
+.cardMeta {
+  margin-top: auto;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.listItem {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: calc(var(--proteus-ui-radius-control) + 4px);
+  border: 1px solid color-mix(in srgb, var(--proteus-border) 68%, white 12%);
+  background: color-mix(in srgb, var(--proteus-ui-surface-card-strong) 86%, transparent);
+  cursor: pointer;
+  transition: transform 0.14s ease, border-color 0.14s ease, background 0.14s ease;
+}
+
+.listItem:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--brand-experiment) 36%, var(--proteus-border) 64%);
+}
+
+.listItemActive {
+  border-color: color-mix(in srgb, var(--brand-experiment) 58%, var(--proteus-border) 42%);
+  background: color-mix(in srgb, var(--background-modifier-selected) 88%, white 12%);
+}
+
+.listIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 13px;
+  color: var(--header-primary);
+  background: color-mix(in srgb, var(--proteus-ui-surface-pill) 100%, transparent);
+  flex-shrink: 0;
+}
+
+.listCopy {
+  min-width: 0;
+  flex: 1;
+}
+
+.listTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--header-primary);
+}
+
+.listSubtitle {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.listMeta {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.empty {
+  padding: 28px;
+  border-radius: calc(var(--proteus-ui-radius-card) + 2px);
+  border: 1px dashed color-mix(in srgb, var(--proteus-border) 68%, white 10%);
+  background: color-mix(in srgb, var(--proteus-ui-surface-card-strong) 84%, transparent);
+  text-align: center;
+}
+
+.emptyTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--header-primary);
+}
+
+.emptyCopy {
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+@media (max-width: 900px) {
+  .page {
+    padding: 18px;
+  }
+
+  .hero {
+    flex-direction: column;
+  }
+
+  .heroStatus {
+    width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

@@ -13,6 +13,12 @@ defmodule Hermes.Socket.UserSocket do
   # All "channel:<channel_id>" topics route to ChatChannel
   channel "channel:*", Hermes.Channels.ChatChannel
 
+  # Direct messages — "dm:<conversation_id>"
+  channel "dm:*", Hermes.Channels.DMChannel
+
+  # User-scoped private notifications and badge updates — "user:<user_id>"
+  channel "user:*", Hermes.Channels.UserChannel
+
   # Voice/video room signaling — "voice:<room_id>"
   channel "voice:*", Hermes.Channels.VoiceChannel
 

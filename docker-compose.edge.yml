@@ -1,0 +1,88 @@
+services:
+  edge-proxy:
+    image: caddy:2.8-alpine
+    container_name: bergamot-edge
+    ports:
+      - "8088:80"
+    volumes:
+      - ./EdgeProxy/Caddyfile:/etc/caddy/Caddyfile:ro
+    environment:
+      BERGAMOT_WEB_UPSTREAM: host.docker.internal:3001
+      BERGAMOT_API_UPSTREAM: host.docker.internal:8000
+      BERGAMOT_SOCKET_UPSTREAM: host.docker.internal:4000
+      BERGAMOT_MEDIA_UPSTREAM: media-proxy:9100
+      BERGAMOT_ADMIN_UPSTREAM: admin:9101
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - admin
+      - meilisearch
+      - media-proxy
+
+  admin:
+    build:
+      context: ./Admin
+    container_name: bergamot-admin
+    ports:
+      - "9101:9101"
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.12
+    container_name: bergamot-meilisearch
+    ports:
+      - "7700:7700"
+    environment:
+      MEILI_ENV: development
+      MEILI_NO_ANALYTICS: "true"
+    volumes:
+      - meilisearch_data:/meili_data
+
+  mnemosyne:
+    build:
+      context: ./Mnemosyne
+    container_name: bergamot-mnemosyne
+    ports:
+      - "9102:9102"
+    environment:
+      PORT: "9102"
+      KAFKA_BROKERS: "kafka:9092"
+      KAFKA_TOPIC: "bergamot.activity"
+      KAFKA_GROUP_ID: "mnemosyne-search"
+      MEILISEARCH_URL: "http://meilisearch:7700"
+      MEILISEARCH_INDEX: "messages"
+    depends_on:
+      - meilisearch
+    networks:
+      - default
+      - anansi
+
+  media-proxy:
+    build:
+      context: ./MediaProxy
+    container_name: bergamot-media-proxy
+    ports:
+      - "9100:9100"
+    environment:
+      PORT: "9100"
+      ATLAS_PUBLIC_BASE_URL: "http://host.docker.internal:9000/bergamot-cdn"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  clamav:
+    image: clamav/clamav:stable
+    platform: ${BERGAMOT_CLAMAV_PLATFORM:-linux/amd64}
+    container_name: bergamot-clamav
+    profiles:
+      - safety
+    ports:
+      - "3310:3310"
+    volumes:
+      - clamav_data:/var/lib/clamav
+
+volumes:
+  meilisearch_data:
+  clamav_data:
+
+networks:
+  anansi:
+    external: true

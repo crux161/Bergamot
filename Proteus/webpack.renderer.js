@@ -14,6 +14,9 @@ module.exports = {
     extensions: [".tsx", ".ts", ".js", ".jsx"],
     alias: {
       "@": path.resolve(__dirname, "src/renderer"),
+      "@bergamot/contracts": path.resolve(__dirname, "../packages/contracts/src"),
+      "@bergamot/config": path.resolve(__dirname, "../packages/config/src"),
+      "@bergamot/ui-tokens": path.resolve(__dirname, "../packages/ui-tokens/src"),
     },
   },
   module: {
@@ -24,7 +27,23 @@ module.exports = {
         exclude: /node_modules/,
       },
       {
+        test: /\.module\.css$/,
+        use: [
+          "style-loader",
+          {
+            loader: "css-loader",
+            options: {
+              modules: {
+                localIdentName: "[name]__[local]__[hash:base64:5]",
+                namedExport: false,
+              },
+            },
+          },
+        ],
+      },
+      {
         test: /\.css$/,
+        exclude: /\.module\.css$/,
         use: ["style-loader", "css-loader"],
       },
       {
@@ -55,6 +74,11 @@ module.exports = {
       },
     ],
   },
+  watchOptions: {
+    aggregateTimeout: 300,
+    poll: 1000,
+    ignored: /node_modules|dist|release|\.test-dist/,
+  },
   plugins: [
     new HtmlWebpackPlugin({
       template: "./src/renderer/index.html",
@@ -66,11 +90,19 @@ module.exports = {
     }),
   ],
   devServer: {
+    host: "127.0.0.1",
     port: 3000,
     hot: true,
     static: [
-      { directory: path.resolve(__dirname, "dist/renderer") },
-      { directory: path.resolve(__dirname, "public"), publicPath: "/" },
+      {
+        directory: path.resolve(__dirname, "dist/renderer"),
+        watch: false,
+      },
+      {
+        directory: path.resolve(__dirname, "public"),
+        publicPath: "/",
+        watch: false,
+      },
     ],
     client: {
       overlay: {

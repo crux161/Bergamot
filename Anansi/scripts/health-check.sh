@@ -4,7 +4,7 @@
 set -euo pipefail
 
 BOOTSTRAP="localhost:9093"
-EXPECTED_TOPICS=("user.events" "chat.messages" "chat.activity" "voice.signaling")
+EXPECTED_TOPICS=("user.events" "chat.messages" "chat.activity" "bergamot.activity" "voice.signaling")
 
 echo "Checking Kafka broker at ${BOOTSTRAP}…"
 

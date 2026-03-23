@@ -1,4 +1,4 @@
-//! Kafka consumer that reads `chat.events`, assigns Snowflake IDs, and writes to ScyllaDB.
+//! Kafka consumer that reads `chat.messages`, assigns Snowflake IDs, and writes to ScyllaDB.
 //!
 //! Each consumed message is deserialized as a [`MessageCreatedEvent`], stamped with a
 //! unique [`SnowflakeGenerator`] ID, and persisted via [`MessageRepository`].
@@ -14,7 +14,7 @@ use crate::db::repository::MessageRepository;
 use crate::models::message::{MessageCreatedEvent, MessageRow};
 use crate::models::snowflake::SnowflakeGenerator;
 
-/// Kafka stream consumer for the `chat.events` topic.
+/// Kafka stream consumer for the `chat.messages` topic.
 pub struct ChatEventConsumer {
     consumer: StreamConsumer,
     repo: Arc<MessageRepository>,

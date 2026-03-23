@@ -11,6 +11,9 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src/renderer"),
+      "@bergamot/contracts": path.resolve(__dirname, "../packages/contracts/src"),
+      "@bergamot/config": path.resolve(__dirname, "../packages/config/src"),
+      "@bergamot/ui-tokens": path.resolve(__dirname, "../packages/ui-tokens/src"),
     },
   },
 

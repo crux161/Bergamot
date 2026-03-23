@@ -22,6 +22,7 @@ Single-node KRaft broker with dual listeners:
 | `user.events` | 6 | user_id | Janus | Hermes, Heimdall |
 | `chat.messages` | 12 | channel_id | Hermes | Thoth |
 | `chat.activity` | 6 | user_id | Hermes | Heimdall |
+| `bergamot.activity` | 6 | stream_id / user_id | Janus | Heimdall, Mnemosyne |
 | `voice.signaling` | 6 | room_id | Apollo | Hermes |
 
 ## Running

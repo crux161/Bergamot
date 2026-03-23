@@ -1,0 +1,384 @@
+/* ── Active Now Sidebar ── */
+/* Matches Rival's ActiveNowSidebar layout at 22rem fixed width */
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  width: 22rem;
+  height: 100%;
+  border-left: 1px solid var(--background-modifier-accent);
+  background-color: var(--background-secondary);
+  flex-shrink: 0;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  padding: 1rem 1rem 0.75rem;
+}
+
+.headerTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--header-primary);
+}
+
+.content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0 0.75rem 0.75rem;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+/* ── Empty State ── */
+
+.emptyState {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  text-align: center;
+  gap: 0.75rem;
+}
+
+.emptyIcon {
+  width: 3rem;
+  height: 3rem;
+  color: var(--text-muted);
+  opacity: 0.6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.emptyTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--header-secondary);
+}
+
+.emptyDescription {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+/* ── Voice Activity Card ── */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md, 6px);
+  background-color: var(--background-tertiary);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.04));
+  width: 100%;
+  align-self: stretch;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+}
+
+.headerContextGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.headerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.activityLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--header-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.streamingLabel {
+  color: var(--status-danger, #f23f43);
+}
+
+/* ── Participant Avatars ── */
+
+.participantsAvatarStack {
+  flex-shrink: 0;
+  display: flex;
+  padding-right: 4px;
+}
+
+.participantAvatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid var(--background-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--header-primary);
+  background: var(--brand-experiment-560, #3d5d42);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.participantAvatar:not(:first-child) {
+  margin-left: -8px;
+}
+
+.participantAvatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.participantOverflow {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid var(--background-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: var(--background-secondary);
+  margin-left: -8px;
+  flex-shrink: 0;
+}
+
+/* ── Context (channel / guild info) ── */
+
+.contextButton {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  border: none;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.contextButton:hover .contextChannelName {
+  color: var(--header-primary);
+}
+
+.contextIcon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.contextGuildIcon {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: 700;
+  color: var(--header-primary);
+  background: var(--brand-experiment-560, #3d5d42);
+  overflow: hidden;
+}
+
+.contextGuildIconImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.contextChevron {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.contextChannelName {
+  font-size: 13px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  transition: color 0.15s;
+}
+
+/* ── Status dot on avatars ── */
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.statusDot[data-status="online"] {
+  background: var(--status-positive, #23a55a);
+}
+
+.statusDot[data-status="idle"] {
+  background: var(--status-warning, #f0b232);
+}
+
+.statusDot[data-status="dnd"] {
+  background: var(--status-danger, #f23f43);
+}
+
+.statusDot[data-status="offline"] {
+  background: var(--text-muted);
+}
+
+/* ── Friend activity card (presence-based, no voice) ── */
+
+.friendCard {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm, 4px);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.friendCard:hover {
+  background: var(--background-modifier-hover, rgba(64, 66, 73, 0.3));
+}
+
+.friendAvatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--brand-experiment-560, #3d5d42);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--header-primary);
+  flex-shrink: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.friendAvatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.friendAvatarStatus {
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--background-tertiary);
+}
+
+.friendInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.friendName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--header-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.friendStatus {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Action Row ── */
+
+.actionRow {
+  display: flex;
+}
+
+.actionButton {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm, 4px);
+  border: none;
+  background: var(--brand-experiment, #4e8258);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.actionButton:hover {
+  background: var(--brand-experiment-560, #3d5d42);
+  transform: translateY(-1px);
+}
+
+.actionButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ── Section Divider ── */
+
+.sectionLabel {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  padding: 8px 4px 4px;
+}
+
+/* ── Responsive ── */
+
+@media (max-width: 1100px) {
+  .sidebar {
+    display: none;
+  }
+}

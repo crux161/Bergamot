@@ -1,7 +1,7 @@
 /// Heimdall — Read State & Notification Worker.
 ///
-/// Consumes `user.activity` events from Kafka, updates per-user read cursors
-/// in Redis, and dispatches mention notifications.
+/// Consumes canonical `bergamot.activity` events from Kafka, updates per-user
+/// read cursors in Redis, and maintains exact unread counters per stream.
 
 mod consumer;
 mod models;
@@ -32,7 +32,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let kafka_group =
         std::env::var("KAFKA_GROUP_ID").unwrap_or_else(|_| "heimdall-readers".to_string());
     let kafka_topic =
-        std::env::var("KAFKA_TOPIC").unwrap_or_else(|_| "user.activity".to_string());
+        std::env::var("KAFKA_TOPIC").unwrap_or_else(|_| "bergamot.activity".to_string());
 
     // --- Redis ---
     let tracker = Arc::new(ReadTracker::new(&redis_url).await?);

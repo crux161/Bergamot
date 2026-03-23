@@ -1,0 +1,8 @@
+{
+  "to": "phase1a_1774212194@example.com",
+  "from": "noreply@bergamot.local",
+  "subject": "Reset your Bergamot password",
+  "text": "Hi Phase One A,\n\nUse this link to reset your password:\nhttp://localhost:3000/#/reset?token=sfST3QlZdpikQeHZNRclQSOoqZuWWkpLgfJhvZnrLq5YvTtBoq7rI-SdEU7sM7mo\n\nIf you did not request a reset, you can ignore this message.",
+  "html": null,
+  "created_at": "2026-03-22T20:43:15.314021+00:00"
+}

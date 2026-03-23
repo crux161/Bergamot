@@ -1,0 +1,8 @@
+{
+  "to": "lock_7f160153@example.com",
+  "from": "noreply@bergamot.local",
+  "subject": "Verify your Bergamot email address",
+  "text": "Hi lock_7f160153,\n\nUse this link to verify your email address:\nhttp://localhost:3000/#/verify?token=Dp4YpwoWyLyRk4Qdxaj8ILzdl4hJtV9Xg-WcRpToC5RTAmAvYemE-XEe1WRKpH-A\n\nIf you did not create this account, you can ignore this message.",
+  "html": null,
+  "created_at": "2026-03-22T22:21:37.843407+00:00"
+}

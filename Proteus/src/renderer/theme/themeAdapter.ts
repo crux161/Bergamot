@@ -717,10 +717,15 @@ function mapProteusUiVariables(
   return uiTokens;
 }
 
-function renderCompiledCss(contract: ProteusThemeContract): string {
+function renderCompiledCss(contract: ProteusThemeContract, baseTheme: BaseTheme): string {
   const colorLines = PROTEUS_TOKEN_NAMES.map((tokenName) => `  --proteus-${tokenName}: ${contract.colors[tokenName]};`);
   const uiLines = PROTEUS_UI_TOKEN_NAMES.map((tokenName) => `  --proteus-ui-${tokenName}: ${contract.ui[tokenName]};`);
-  return [":root {", ...colorLines, ...uiLines, "}"].join("\n");
+  // Use :root.theme-{mode} to match or exceed the specificity of the
+  // fallback blocks in global.scss (:root.theme-light / :root.theme-dark).
+  // Without this, the global.scss light-mode fallback always wins because
+  // :root.theme-light (0,1,1) beats a plain :root (0,0,1).
+  const selector = `:root.theme-${baseTheme}`;
+  return [selector + " {", ...colorLines, ...uiLines, "}"].join("\n");
 }
 
 function ensureAllTokens(tokens: Partial<ProteusTokenRecord>): ProteusTokenRecord {
@@ -786,7 +791,7 @@ export function buildCompiledThemeCss({
   defaultCss,
   customCss,
 }: BuildCompiledThemeCssInput): string {
-  return renderCompiledCss(compileThemeContract(defaultCss, customCss, baseTheme));
+  return renderCompiledCss(compileThemeContract(defaultCss, customCss, baseTheme), baseTheme);
 }
 
 export function extractThemeVariables(css: string, baseTheme: BaseTheme): Record<string, string> {

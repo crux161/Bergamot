@@ -7,15 +7,22 @@
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
+    "types": ["node", "react", "react-dom"],
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "declaration": true,
     "outDir": "./dist",
-    "baseUrl": "./src",
+    "baseUrl": ".",
     "paths": {
-      "@/*": ["renderer/*"]
+      "@/*": ["src/renderer/*"],
+      "@bergamot/contracts": ["../packages/contracts/src/index.ts"],
+      "@bergamot/contracts/*": ["../packages/contracts/src/*"],
+      "@bergamot/config": ["../packages/config/src/index.ts"],
+      "@bergamot/config/*": ["../packages/config/src/*"],
+      "@bergamot/ui-tokens": ["../packages/ui-tokens/src/index.ts"],
+      "@bergamot/ui-tokens/*": ["../packages/ui-tokens/src/*"]
     }
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "../packages/*/src/**/*"],
   "exclude": ["node_modules", "dist"]
 }

@@ -6,8 +6,15 @@ services:
     environment:
       MIX_ENV: dev
       PORT: "4000"
-      JWT_SECRET: "CHANGE-ME-in-production-use-openssl-rand-hex-32"
+      JWT_SECRET: "dev-only-change-me-in-production"
+      HERMES_INTERNAL_SECRET: "bergamot-hermes-internal-dev"
       SECRET_KEY_BASE: "dev-secret-base-that-is-at-least-64-bytes-long-for-phoenix-to-accept-it-ok"
-      # Route out of the container network and back to the Mac's localhost where Anansi is exposed
-      KAFKA_HOST: host.docker.internal
+      KAFKA_HOST: kafka
       KAFKA_PORT: "9092"
+      LIVEKIT_URL: "ws://host.docker.internal:7880"
+      LIVEKIT_API_KEY: "bergamot_apollo_dev"
+      LIVEKIT_API_SECRET: "s3cr3t_ap0ll0_k3y_d0_n0t_us3_1n_pr0d"
+networks:
+  default:
+    name: anansi
+    external: true

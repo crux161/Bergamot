@@ -1,20 +1,33 @@
-//! Per-user, per-channel read-cursor management backed by Redis.
+//! Per-user, per-stream read tracking backed by Redis.
 //!
-//! Cursors are Snowflake IDs and are only advanced forward to tolerate
-//! out-of-order or duplicate `message_read` events.
+//! Bergamot uses UUIDs rather than Snowflake IDs, so Heimdall stores explicit
+//! read cursors and exact unread counters instead of relying on ID deltas.
 
+use chrono::{DateTime, Utc};
 use redis::AsyncCommands;
-use tracing::{error, info};
+use tracing::{debug, error, info};
 
-/// Manages per-user, per-channel read cursors in Redis.
-///
-/// Key schema:
-///   `read_state:{user_id}:{channel_id}` → last_read_message_id (Snowflake, i64)
-///   `channel_latest:{channel_id}`       → latest_message_id (Snowflake, i64)
-///
-/// The first key is written by Heimdall when a `message_read` event arrives.
-/// The second key is written by Heimdall when it observes new messages flowing
-/// through (or by Thoth via a separate publish — depends on deployment wiring).
+fn read_message_key(user_id: &str, stream_id: &str) -> String {
+    format!("read_state:{user_id}:{stream_id}:message_id")
+}
+
+fn read_timestamp_key(user_id: &str, stream_id: &str) -> String {
+    format!("read_state:{user_id}:{stream_id}:ts")
+}
+
+fn stream_message_key(stream_id: &str) -> String {
+    format!("stream_latest:{stream_id}:message_id")
+}
+
+fn stream_timestamp_key(stream_id: &str) -> String {
+    format!("stream_latest:{stream_id}:ts")
+}
+
+fn unread_count_key(user_id: &str, stream_id: &str) -> String {
+    format!("unread_count:{user_id}:{stream_id}")
+}
+
+/// Manages per-user read cursors and unread counts in Redis.
 pub struct ReadTracker {
     conn: redis::aio::MultiplexedConnection,
 }
@@ -28,99 +41,138 @@ impl ReadTracker {
         Ok(Self { conn })
     }
 
-    /// Update a user's read cursor for a channel.
-    /// Only advances forward — ignores stale / out-of-order events.
+    /// Persist the latest read cursor and clear unread count for the stream.
     pub async fn set_last_read(
         &self,
         user_id: &str,
-        channel_id: &str,
-        message_id: i64,
+        stream_id: &str,
+        message_id: Option<&str>,
+        read_at: Option<DateTime<Utc>>,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let key = format!("read_state:{user_id}:{channel_id}");
+        let message_key = read_message_key(user_id, stream_id);
+        let timestamp_key = read_timestamp_key(user_id, stream_id);
+        let unread_key = unread_count_key(user_id, stream_id);
         let mut conn = self.conn.clone();
 
-        // Atomic check-and-set: only write if new value > existing value.
-        // Uses a Lua script for atomicity without WATCH/MULTI overhead.
-        let script = redis::Script::new(
-            r#"
-            local current = tonumber(redis.call('GET', KEYS[1]) or 0)
-            local proposed = tonumber(ARGV[1])
-            if proposed > current then
-                redis.call('SET', KEYS[1], ARGV[1])
-                return 1
-            end
-            return 0
-            "#,
+        let mut pipe = redis::pipe();
+        pipe.atomic();
+        match message_id {
+            Some(message_id) => {
+                pipe.set(&message_key, message_id).ignore();
+            }
+            None => {
+                pipe.del(&message_key).ignore();
+            }
+        }
+        match read_at {
+            Some(read_at) => {
+                pipe.set(&timestamp_key, read_at.to_rfc3339()).ignore();
+            }
+            None => {
+                pipe.del(&timestamp_key).ignore();
+            }
+        }
+        pipe.set(&unread_key, 0_u64).ignore();
+
+        let _: () = pipe.query_async(&mut conn).await.map_err(|e| {
+            error!("Redis set_last_read failed for user={user_id} stream={stream_id}: {e}");
+            e
+        })?;
+
+        debug!(
+            user_id,
+            stream_id,
+            message_id = message_id.unwrap_or(""),
+            "Updated read cursor and cleared unread count"
         );
+        Ok(())
+    }
 
-        let updated: i32 = script
-            .key(&key)
-            .arg(message_id)
-            .invoke_async(&mut conn)
-            .await
-            .map_err(|e| {
-                error!("Redis set_last_read failed for {key}: {e}");
-                e
-            })?;
+    /// Record a new message and increment exact unread counts for recipients.
+    pub async fn record_message_created(
+        &self,
+        stream_id: &str,
+        message_id: &str,
+        created_at: Option<DateTime<Utc>>,
+        recipient_user_ids: &[String],
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let latest_message_key = stream_message_key(stream_id);
+        let latest_timestamp_key = stream_timestamp_key(stream_id);
+        let mut conn = self.conn.clone();
 
-        if updated == 1 {
-            tracing::debug!("Advanced read cursor {key} -> {message_id}");
+        let mut pipe = redis::pipe();
+        pipe.atomic();
+        pipe.set(&latest_message_key, message_id).ignore();
+        if let Some(created_at) = created_at {
+            pipe.set(&latest_timestamp_key, created_at.to_rfc3339()).ignore();
+        }
+        for user_id in recipient_user_ids {
+            pipe.incr(unread_count_key(user_id, stream_id), 1_i64).ignore();
         }
 
-        Ok(())
-    }
+        let _: () = pipe.query_async(&mut conn).await.map_err(|e| {
+            error!(
+                "Redis record_message_created failed for stream={stream_id} message={message_id}: {e}"
+            );
+            e
+        })?;
 
-    /// Record the latest message ID posted in a channel.
-    /// Called when we observe a new message event (from chat.events or a side-channel).
-    pub async fn set_channel_latest(
-        &self,
-        channel_id: &str,
-        message_id: i64,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        let key = format!("channel_latest:{channel_id}");
-        let mut conn = self.conn.clone();
-
-        let script = redis::Script::new(
-            r#"
-            local current = tonumber(redis.call('GET', KEYS[1]) or 0)
-            local proposed = tonumber(ARGV[1])
-            if proposed > current then
-                redis.call('SET', KEYS[1], ARGV[1])
-                return 1
-            end
-            return 0
-            "#,
+        debug!(
+            stream_id,
+            message_id,
+            recipients = recipient_user_ids.len(),
+            "Recorded message create and incremented unread counters"
         );
-
-        let _: i32 = script
-            .key(&key)
-            .arg(message_id)
-            .invoke_async(&mut conn)
-            .await?;
-
         Ok(())
     }
 
-    /// Get a user's last-read message ID for a channel.
+    /// Record a delete tombstone. The exact unread counter remains unchanged
+    /// until the next read-state sync because Janus is still the source of
+    /// truth for badge summaries during the migration.
+    pub async fn record_message_deleted(
+        &self,
+        stream_id: &str,
+        message_id: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        debug!(stream_id, message_id, "Observed message delete tombstone");
+        Ok(())
+    }
+
+    /// Get a user's stored read cursor for a stream.
+    #[allow(dead_code)]
     pub async fn get_last_read(
         &self,
         user_id: &str,
-        channel_id: &str,
-    ) -> Result<Option<i64>, Box<dyn std::error::Error>> {
-        let key = format!("read_state:{user_id}:{channel_id}");
+        stream_id: &str,
+    ) -> Result<Option<String>, Box<dyn std::error::Error>> {
+        let key = read_message_key(user_id, stream_id);
         let mut conn = self.conn.clone();
-        let val: Option<i64> = conn.get(&key).await?;
+        let val: Option<String> = conn.get(&key).await?;
         Ok(val)
     }
 
-    /// Get the latest message ID for a channel.
-    pub async fn get_channel_latest(
+    /// Get the latest observed message ID for a stream.
+    #[allow(dead_code)]
+    pub async fn get_stream_latest(
         &self,
-        channel_id: &str,
-    ) -> Result<Option<i64>, Box<dyn std::error::Error>> {
-        let key = format!("channel_latest:{channel_id}");
+        stream_id: &str,
+    ) -> Result<Option<String>, Box<dyn std::error::Error>> {
+        let key = stream_message_key(stream_id);
         let mut conn = self.conn.clone();
-        let val: Option<i64> = conn.get(&key).await?;
+        let val: Option<String> = conn.get(&key).await?;
         Ok(val)
+    }
+
+    /// Get the stored unread count for a user/stream pair.
+    #[allow(dead_code)]
+    pub async fn get_unread_count(
+        &self,
+        user_id: &str,
+        stream_id: &str,
+    ) -> Result<u64, Box<dyn std::error::Error>> {
+        let key = unread_count_key(user_id, stream_id);
+        let mut conn = self.conn.clone();
+        let val: Option<u64> = conn.get(&key).await?;
+        Ok(val.unwrap_or(0))
     }
 }

@@ -28,6 +28,7 @@ class UserRead(BaseModel):
     banner_url: str | None
     status: str
     status_message: str | None
+    email_verified: bool
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -36,3 +37,27 @@ class UserRead(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
+    session_id: uuid.UUID | None = None
+    expires_at: datetime | None = None
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str = Field(min_length=8, max_length=128)
+
+
+class VerifyEmailRequest(BaseModel):
+    token: str
+
+
+class ResendVerificationRequest(BaseModel):
+    email: EmailStr
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(min_length=1, max_length=128)
+    new_password: str = Field(min_length=8, max_length=128)

@@ -1,0 +1,496 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bergamot Admin</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #121316;
+        --panel: rgba(28, 31, 37, 0.94);
+        --panel-strong: rgba(36, 39, 46, 0.98);
+        --border: rgba(130, 139, 153, 0.24);
+        --accent: #a5c77b;
+        --accent-strong: #bfdc8c;
+        --text: #e8eaee;
+        --muted: #98a0ab;
+        --danger: #d46f73;
+        --warning: #e0b663;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "DM Sans", "Segoe UI", sans-serif;
+        background:
+          radial-gradient(circle at top left, rgba(165, 199, 123, 0.18), transparent 30%),
+          radial-gradient(circle at top right, rgba(100, 120, 170, 0.12), transparent 26%),
+          linear-gradient(180deg, #101114 0%, #171a1f 100%);
+        color: var(--text);
+      }
+
+      main {
+        max-width: 1320px;
+        margin: 0 auto;
+        padding: 40px 24px 72px;
+        display: grid;
+        gap: 22px;
+      }
+
+      .hero {
+        display: grid;
+        gap: 16px;
+      }
+
+      .eyebrow {
+        color: var(--accent);
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: clamp(2.1rem, 5vw, 3.8rem);
+        line-height: 0.96;
+        max-width: 900px;
+      }
+
+      .hero p {
+        color: var(--muted);
+        max-width: 780px;
+        line-height: 1.55;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+        gap: 18px;
+      }
+
+      .card {
+        padding: 20px;
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        background: linear-gradient(180deg, var(--panel-strong), var(--panel));
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28);
+        display: grid;
+        gap: 14px;
+      }
+
+      .card--span-3 { grid-column: span 3; }
+      .card--span-4 { grid-column: span 4; }
+      .card--span-5 { grid-column: span 5; }
+      .card--span-6 { grid-column: span 6; }
+      .card--span-7 { grid-column: span 7; }
+      .card--span-8 { grid-column: span 8; }
+      .card--span-12 { grid-column: span 12; }
+
+      .subtle {
+        color: var(--muted);
+        font-size: 0.92rem;
+        line-height: 1.5;
+      }
+
+      .list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.03);
+      }
+
+      .item strong {
+        font-size: 0.95rem;
+      }
+
+      .item span {
+        color: var(--muted);
+        word-break: break-all;
+        text-align: right;
+      }
+
+      .pill,
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        padding: 4px 10px;
+        font-size: 0.78rem;
+        font-weight: 700;
+      }
+
+      .pill,
+      .badge--open {
+        background: rgba(165, 199, 123, 0.18);
+        color: #e0f0c3;
+      }
+
+      .badge--investigating {
+        background: rgba(224, 182, 99, 0.16);
+        color: #f5d79b;
+      }
+
+      .badge--resolved {
+        background: rgba(92, 170, 132, 0.18);
+        color: #c8efd9;
+      }
+
+      .badge--dismissed {
+        background: rgba(212, 111, 115, 0.16);
+        color: #f2c1c3;
+      }
+
+      .toolbar,
+      .auth-grid,
+      .inline-form,
+      .record__actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+
+      .toolbar {
+        justify-content: space-between;
+      }
+
+      input,
+      select,
+      button {
+        font: inherit;
+      }
+
+      input,
+      select {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background: rgba(16, 18, 22, 0.68);
+        color: var(--text);
+      }
+
+      .field {
+        display: grid;
+        gap: 6px;
+        min-width: 0;
+      }
+
+      .field label {
+        color: var(--muted);
+        font-size: 0.82rem;
+      }
+
+      .auth-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .auth-grid--wide {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+      }
+
+      button,
+      .btn {
+        border: 1px solid transparent;
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--text);
+        padding: 10px 12px;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
+      }
+
+      button:hover,
+      .btn:hover {
+        transform: translateY(-1px);
+        border-color: rgba(255, 255, 255, 0.12);
+      }
+
+      .btn--primary {
+        background: linear-gradient(135deg, #9fc676, #83a65f);
+        color: #101310;
+        font-weight: 700;
+      }
+
+      .btn--danger {
+        background: rgba(212, 111, 115, 0.16);
+        color: #f3c6c8;
+      }
+
+      .status {
+        color: var(--muted);
+      }
+
+      .status[data-tone="success"] {
+        color: #cfe9b7;
+      }
+
+      .status[data-tone="danger"] {
+        color: #f3c6c8;
+      }
+
+      .record-list {
+        display: grid;
+        gap: 12px;
+      }
+
+      .record {
+        padding: 14px;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        background: rgba(255, 255, 255, 0.025);
+        display: grid;
+        gap: 10px;
+      }
+
+      .record__top {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .record__title {
+        font-weight: 700;
+      }
+
+      .record__meta,
+      .record__subtle {
+        color: var(--muted);
+        font-size: 0.87rem;
+        line-height: 1.45;
+      }
+
+      .record__body {
+        line-height: 1.55;
+      }
+
+      .empty {
+        color: var(--muted);
+        padding: 12px 0;
+      }
+
+      @media (max-width: 1100px) {
+        .card--span-3,
+        .card--span-4,
+        .card--span-5,
+        .card--span-6,
+        .card--span-7,
+        .card--span-8 {
+          grid-column: span 12;
+        }
+
+        .auth-grid,
+        .auth-grid--wide {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="hero">
+        <div class="eyebrow">Bergamot Admin</div>
+        <h1>Moderation, reports, and operational visibility for the Bergamot ecosystem.</h1>
+        <p>
+          This console now signs into Janus, reviews reports, suspends abusive accounts,
+          and performs message takedowns while still exposing instance discovery and runtime capability data.
+        </p>
+      </section>
+
+      <section class="grid">
+        <article class="card card--span-12">
+          <div class="toolbar">
+            <div>
+              <h2>Access</h2>
+              <p class="subtle">Use a globally configured admin account to review reports and moderation state.</p>
+            </div>
+            <div id="auth-status" class="status">Loading…</div>
+          </div>
+
+          <div class="auth-grid auth-grid--wide">
+            <div class="field">
+              <label for="api-origin">API Origin</label>
+              <input id="api-origin" placeholder="http://localhost:8000" />
+            </div>
+            <form id="login-form" class="auth-grid" style="grid-column: span 4;">
+              <div class="field">
+                <label for="username">Username</label>
+                <input id="username" autocomplete="username" />
+              </div>
+              <div class="field">
+                <label for="password">Password</label>
+                <input id="password" type="password" autocomplete="current-password" />
+              </div>
+              <div class="field" id="otp-row" hidden>
+                <label for="otp-code">Authenticator Code</label>
+                <input id="otp-code" inputmode="numeric" maxlength="6" placeholder="123456" />
+              </div>
+              <div class="field" style="align-self: end;">
+                <button id="login-button" class="btn--primary" type="submit">Sign In</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="inline-form">
+            <button id="refresh-button">Refresh</button>
+            <button id="logout-button">Sign Out</button>
+          </div>
+        </article>
+
+        <article class="card card--span-4">
+          <h2>Instance</h2>
+          <div class="list" id="instance-card"></div>
+        </article>
+
+        <article class="card card--span-4">
+          <h2>Enabled Capabilities</h2>
+          <div class="list" id="capabilities-card"></div>
+        </article>
+
+        <article class="card card--span-4">
+          <h2>Services</h2>
+          <div class="list" id="services-card"></div>
+        </article>
+
+        <article class="card card--span-4">
+          <h2>Overview</h2>
+          <div class="list" id="overview-card"></div>
+        </article>
+
+        <article class="card card--span-8">
+          <div class="toolbar">
+            <div>
+              <h2>Reports</h2>
+              <p class="subtle">Review open issues, record outcomes, and remove reported messages.</p>
+            </div>
+            <div class="field" style="min-width: 180px;">
+              <label for="report-filter">Filter</label>
+              <select id="report-filter">
+                <option value="all">All</option>
+                <option value="open">Open</option>
+                <option value="investigating">Investigating</option>
+                <option value="resolved">Resolved</option>
+                <option value="dismissed">Dismissed</option>
+              </select>
+            </div>
+          </div>
+          <div class="record-list" id="reports-card"></div>
+        </article>
+
+        <article class="card card--span-6">
+          <div class="toolbar">
+            <div>
+              <h2>Users</h2>
+              <p class="subtle">Search accounts and apply or lift suspensions.</p>
+            </div>
+            <form id="user-search-form" class="inline-form">
+              <input id="user-query" placeholder="Search users" />
+              <button type="submit">Search</button>
+            </form>
+          </div>
+          <div class="record-list" id="users-card"></div>
+        </article>
+
+        <article class="card card--span-6">
+          <div class="toolbar">
+            <div>
+              <h2>Servers</h2>
+              <p class="subtle">Inspect server ownership and member counts.</p>
+            </div>
+            <form id="server-search-form" class="inline-form">
+              <input id="server-query" placeholder="Search servers" />
+              <button type="submit">Search</button>
+            </form>
+          </div>
+          <div class="record-list" id="servers-card"></div>
+        </article>
+
+        <article class="card card--span-8">
+          <div class="toolbar">
+            <div>
+              <h2>Audit Log</h2>
+              <p class="subtle">Moderation actions, suspensions, and report resolutions in reverse chronological order.</p>
+            </div>
+          </div>
+          <div class="record-list" id="audit-card"></div>
+        </article>
+
+        <article class="card card--span-4">
+          <h2>Media Stats</h2>
+          <div class="list" id="media-card"></div>
+        </article>
+
+        <article class="card card--span-6">
+          <div class="toolbar">
+            <div>
+              <h2>Channels</h2>
+              <p class="subtle">Inspect channels across all servers with message counts.</p>
+            </div>
+            <form id="channel-search-form" class="inline-form">
+              <input id="channel-query" placeholder="Search channels" />
+              <button type="submit">Search</button>
+            </form>
+          </div>
+          <div class="record-list" id="channels-card"></div>
+        </article>
+
+        <article class="card card--span-6">
+          <div class="toolbar">
+            <div>
+              <h2>Instance Limits</h2>
+              <p class="subtle">Runtime configuration limits. Changes take effect immediately.</p>
+            </div>
+          </div>
+          <form id="config-form" class="auth-grid" style="grid-template-columns: repeat(2, 1fr);">
+            <div class="field">
+              <label for="cfg-registration">Registration Enabled</label>
+              <select id="cfg-registration">
+                <option value="true">Yes</option>
+                <option value="false">No</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="cfg-max-servers">Max Servers per User</label>
+              <input id="cfg-max-servers" type="number" min="1" max="1000" />
+            </div>
+            <div class="field">
+              <label for="cfg-max-channels">Max Channels per Server</label>
+              <input id="cfg-max-channels" type="number" min="1" max="5000" />
+            </div>
+            <div class="field">
+              <label for="cfg-max-message">Max Message Length</label>
+              <input id="cfg-max-message" type="number" min="1" max="20000" />
+            </div>
+            <div class="field" style="align-self: end;">
+              <button type="submit" class="btn--primary">Save Limits</button>
+            </div>
+          </form>
+        </article>
+      </section>
+    </main>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

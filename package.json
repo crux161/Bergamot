@@ -1,4 +1,16 @@
 {
+  "name": "bergamot",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "Admin",
+    "MediaProxy",
+    "Mnemosyne"
+  ],
+  "scripts": {
+    "dev:proteus:web": "npm --prefix Proteus run dev:web",
+    "build:proteus:web": "npm --prefix Proteus run build:web"
+  },
   "devDependencies": {
     "wait-on": "^9.0.4"
   }

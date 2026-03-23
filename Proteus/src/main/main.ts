@@ -1,6 +1,7 @@
 import { app, BrowserWindow, desktopCapturer, ipcMain, session, shell } from "electron";
 import * as fs from "fs";
 import * as path from "path";
+import { pathToFileURL } from "url";
 
 let mainWindow: BrowserWindow | null = null;
 const themeWatchers: fs.FSWatcher[] = [];
@@ -156,6 +157,37 @@ ipcMain.handle("games:list", async () => {
     gamepadMapping?: { buttons?: Record<number, string>; axes?: Record<number, [string, string]> };
   }> = [];
 
+  const inferType = (manifest: Record<string, unknown>): "wasm" | "iframe" => {
+    if (manifest.type === "wasm" || manifest.type === "iframe") {
+      return manifest.type;
+    }
+    const candidate = typeof manifest.url === "string"
+      ? manifest.url
+      : typeof manifest.entry === "string"
+        ? manifest.entry
+        : "";
+    return candidate.endsWith(".html") ? "iframe" : "wasm";
+  };
+
+  const resolveGameUrl = (dir: string, manifest: Record<string, unknown>): string => {
+    if (typeof manifest.url === "string" && manifest.url.trim().length > 0) {
+      const url = manifest.url.trim();
+      if (/^https?:\/\//i.test(url)) {
+        return url;
+      }
+      if (url.startsWith("/")) {
+        return url;
+      }
+      return `/${url.replace(/^\/+/, "")}`;
+    }
+
+    if (typeof manifest.entry === "string" && manifest.entry.trim().length > 0) {
+      return `/games/${dir}/${manifest.entry}`;
+    }
+
+    throw new Error(`Game manifest for ${dir} is missing both "url" and "entry"`);
+  };
+
   let dirs: string[];
   try {
     dirs = await fs.promises.readdir(gamesDir);
@@ -167,18 +199,22 @@ ipcMain.handle("games:list", async () => {
     const manifestPath = path.join(gamesDir, dir, "manifest.json");
     try {
       const raw = await fs.promises.readFile(manifestPath, "utf-8");
-      const manifest = JSON.parse(raw);
+      const manifest = JSON.parse(raw) as Record<string, unknown>;
+      const type = inferType(manifest);
+      const url = resolveGameUrl(dir, manifest);
       entries.push({
-        id: manifest.id ?? dir.toLowerCase(),
-        name: manifest.name ?? dir,
-        icon: manifest.icon ?? "🎮",
-        url: `/games/${dir}/${manifest.entry}`,
-        type: manifest.type ?? "wasm",
-        version: manifest.version ?? "0.0.0",
-        description: manifest.description,
-        cover: manifest.cover ? `/games/${dir}/${manifest.cover}` : undefined,
-        color: manifest.color,
-        gamepadMapping: manifest.gamepadMapping,
+        id: typeof manifest.id === "string" ? manifest.id : dir.toLowerCase(),
+        name: typeof manifest.name === "string" ? manifest.name : dir,
+        icon: typeof manifest.icon === "string" ? manifest.icon : "🎮",
+        url,
+        type,
+        version: typeof manifest.version === "string" ? manifest.version : "0.0.0",
+        description: typeof manifest.description === "string" ? manifest.description : undefined,
+        cover: typeof manifest.cover === "string" ? `/games/${dir}/${manifest.cover}` : undefined,
+        color: typeof manifest.color === "string" ? manifest.color : undefined,
+        gamepadMapping: typeof manifest.gamepadMapping === "object" && manifest.gamepadMapping !== null
+          ? manifest.gamepadMapping as { buttons?: Record<number, string>; axes?: Record<number, [string, string]> }
+          : undefined,
       });
     } catch {
       // No manifest or invalid JSON — skip this directory
@@ -186,6 +222,79 @@ ipcMain.handle("games:list", async () => {
   }
 
   return entries.sort((a, b) => a.name.localeCompare(b.name));
+});
+
+// ── Turtle scraper IPC handlers ──
+
+interface TurtleScraperModule {
+  search: (query: string) => Promise<Array<{
+    id: string;
+    title: string;
+    img: string;
+  }>>;
+  getEpisodes: (showId: string) => Promise<Array<{
+    epNum: number;
+    link: string;
+  }>>;
+  extractStreamUrl: (episodeLink: string) => Promise<Array<{
+    server: string;
+    url: string;
+    subs?: Array<{
+      lang: string;
+      url: string;
+    }>;
+  }>>;
+}
+
+async function getScraper(): Promise<TurtleScraperModule> {
+  const scraperPath = path.join(getGamesDir(), "Turtle", "dist", "scraper.js");
+
+  if (!fs.existsSync(scraperPath)) {
+    throw new Error(`Turtle scraper not found at ${scraperPath}`);
+  }
+
+  const loaded = await import(/* webpackIgnore: true */ pathToFileURL(scraperPath).href);
+  const scraper = (loaded.default ?? loaded) as Partial<TurtleScraperModule>;
+
+  if (
+    typeof scraper.search !== "function"
+    || typeof scraper.getEpisodes !== "function"
+    || typeof scraper.extractStreamUrl !== "function"
+  ) {
+    throw new Error("Turtle scraper module does not expose the expected functions");
+  }
+
+  return scraper as TurtleScraperModule;
+}
+
+ipcMain.handle("scraper:search", async (_event, query: string) => {
+  try {
+    const scraper = await getScraper();
+    return await scraper.search(query);
+  } catch (error) {
+    console.error("[Turtle] Search Error:", error);
+    throw error;
+  }
+});
+
+ipcMain.handle("scraper:getEpisodes", async (_event, showId: string) => {
+  try {
+    const scraper = await getScraper();
+    return await scraper.getEpisodes(showId);
+  } catch (error) {
+    console.error("[Turtle] Episodes Error:", error);
+    throw error;
+  }
+});
+
+ipcMain.handle("scraper:extractStreamUrl", async (_event, episodeLink: string) => {
+  try {
+    const scraper = await getScraper();
+    return await scraper.extractStreamUrl(episodeLink);
+  } catch (error) {
+    console.error("[Turtle] Stream URL Error:", error);
+    throw error;
+  }
 });
 
 // ── Screen Share IPC (desktopCapturer → renderer picker → callback) ──

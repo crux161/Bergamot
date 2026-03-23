@@ -71,9 +71,12 @@
 
 // ── Icon glyph definitions (only icons used in Proteus) ──
 .ph-at:before { content: "\e0ac"; }
+.ph-arrow-square-out:before { content: "\e5de"; }
+.ph-arrows-out:before { content: "\e0a2"; }
 .ph-bell:before { content: "\e0ce"; }
 .ph-signal-high:before { content: "\e144"; } // Alias to Phosphor's cell-signal-high
 .ph-camera:before { content: "\e10e"; }
+.ph-caret-down:before { content: "\e136"; }
 .ph-chart-bar:before { content: "\e150"; }
 .ph-chat-text:before { content: "\e17a"; }
 .ph-chats-circle:before { content: "\e17e"; }

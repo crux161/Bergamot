@@ -9,6 +9,8 @@ if config_env() == :prod do
     System.get_env("JWT_SECRET") ||
       raise "JWT_SECRET not set"
 
+  internal_broadcast_secret = System.get_env("HERMES_INTERNAL_SECRET", "bergamot-hermes-internal-dev")
+
   kafka_host = System.get_env("KAFKA_HOST", "kafka")
   kafka_port = System.get_env("KAFKA_PORT", "9092") |> String.to_integer()
   port = System.get_env("PORT", "4000") |> String.to_integer()
@@ -23,6 +25,7 @@ if config_env() == :prod do
 
   config :hermes,
     jwt_secret: jwt_secret,
+    internal_broadcast_secret: internal_broadcast_secret,
     kafka_brokers: [{kafka_host, kafka_port}],
     livekit_url: livekit_url,
     livekit_api_key: livekit_api_key,

@@ -1,0 +1,11 @@
+{
+  "id": "turtle",
+  "name": "Turtle",
+  "description": "Watch Party Engine",
+  "type": "iframe",
+  "entry": "index.html",
+  "url": "http://localhost:8030/Turtle/index.html",
+  "icon": "🐢",
+  "version": "1.0.0",
+  "color": "#6b9362"
+}

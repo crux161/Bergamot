@@ -25,6 +25,15 @@ services:
       POSTGRES_PASSWORD: janus_secret
       POSTGRES_DB: janus
       SECRET_KEY: dev-only-change-me-in-production
+      HERMES_INTERNAL_URL: http://host.docker.internal:4000/api/internal/broadcast
+      HERMES_INTERNAL_PUBLISH_URL: http://host.docker.internal:4000/api/internal/publish
+      HERMES_INTERNAL_SECRET: bergamot-hermes-internal-dev
+      MEILISEARCH_ENABLED: "true"
+      MEILISEARCH_URL: http://host.docker.internal:7700
+      MEILISEARCH_INDEX: messages
+      ADMIN_USERNAMES: admin
+      WEBAUTHN_RP_ID: ${WEBAUTHN_RP_ID:-localhost}
+      WEBAUTHN_ALLOWED_ORIGINS: ${WEBAUTHN_ALLOWED_ORIGINS:-http://localhost:3001,http://localhost:8000}
     depends_on:
       db:
         condition: service_healthy

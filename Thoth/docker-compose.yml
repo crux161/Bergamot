@@ -26,7 +26,7 @@ services:
       SCYLLA_NODES: "scylla:9042"
       KAFKA_BROKERS: "kafka:9092"
       KAFKA_GROUP_ID: "thoth-writers"
-      KAFKA_TOPIC: "chat.events"
+      KAFKA_TOPIC: "chat.messages"
       WORKER_ID: "0"
       RUST_LOG: "info"
     depends_on:

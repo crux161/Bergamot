@@ -1,6 +1,8 @@
 """User ORM model representing an authenticated Janus user."""
 
-from sqlalchemy import String
+from datetime import datetime
+
+from sqlalchemy import Boolean, DateTime, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin, UUIDPrimaryKey
@@ -29,6 +31,16 @@ class User(UUIDPrimaryKey, TimestampMixin, Base):
     banner_url: Mapped[str | None] = mapped_column(String(512))
     status: Mapped[str] = mapped_column(String(16), default="online", nullable=False, server_default="online")
     status_message: Mapped[str | None] = mapped_column(String(128))
+    is_bot: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("false"))
+    mfa_secret: Mapped[str | None] = mapped_column(String(64))
+    mfa_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("false"))
+    mfa_enabled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    email_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("false"))
+    email_verification_token: Mapped[str | None] = mapped_column(String(128))
+    password_reset_token: Mapped[str | None] = mapped_column(String(128))
+    password_reset_expires: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    suspended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    suspension_reason: Mapped[str | None] = mapped_column(Text)
 
     # Relationships
     owned_servers = relationship("Server", back_populates="owner", lazy="selectin")

@@ -1,9 +1,30 @@
 # Import all models so Base.metadata picks them up
 from app.models.attachment import Attachment  # noqa: F401
+from app.models.audit_log import AuditLogEntry  # noqa: F401
+from app.models.auth_flow_ticket import AuthFlowTicket  # noqa: F401
+from app.models.auth_session import AuthSession  # noqa: F401
 from app.models.channel import Channel  # noqa: F401
+from app.models.dm_conversation import DMConversation  # noqa: F401
+from app.models.external_connection import ExternalConnection  # noqa: F401
+from app.models.gift_code import GiftCode  # noqa: F401
+from app.models.enums import NotificationType, SavedItemKind, StreamKind  # noqa: F401
 from app.models.member_role import MemberRole  # noqa: F401
 from app.models.message import Message  # noqa: F401
+from app.models.message_mention import MessageMention  # noqa: F401
+from app.models.message_reaction import MessageReaction  # noqa: F401
+from app.models.moderation_report import ModerationReport  # noqa: F401
+from app.models.notification import Notification  # noqa: F401
+from app.models.oauth_application import OAuthApplication  # noqa: F401
+from app.models.oauth_authorization_code import OAuthAuthorizationCode  # noqa: F401
+from app.models.oauth_consent_grant import OAuthConsentGrant  # noqa: F401
+from app.models.passkey_credential import PasskeyCredential  # noqa: F401
+from app.models.read_state import ReadState  # noqa: F401
 from app.models.role import Role  # noqa: F401
+from app.models.saved_item import SavedItem  # noqa: F401
 from app.models.server import Server  # noqa: F401
+from app.models.server_ban import ServerBan  # noqa: F401
+from app.models.server_invite import ServerInvite  # noqa: F401
 from app.models.server_member import ServerMember  # noqa: F401
+from app.models.trusted_ip import TrustedIP  # noqa: F401
 from app.models.user import User  # noqa: F401
+from app.models.user_note import UserNote  # noqa: F401

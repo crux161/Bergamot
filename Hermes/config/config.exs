@@ -8,6 +8,7 @@ config :hermes, Hermes.Endpoint,
 config :hermes,
   kafka_brokers: [{"localhost", 9092}],
   jwt_secret: "CHANGE-ME-in-production-use-openssl-rand-hex-32",
+  internal_broadcast_secret: "bergamot-hermes-internal-dev",
   # Apollo (LiveKit SFU) — must match keys in Apollo/livekit.yaml
   livekit_url: "ws://localhost:7880",
   livekit_api_key: "bergamot_apollo_dev",

@@ -17,6 +17,15 @@ import "./styles/layout.scss";
 restoreThemeSnapshot();
 void initializeThemeRuntime();
 
+// Register service worker for PWA support
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {
+      // Service worker registration failed — non-fatal in dev
+    });
+  });
+}
+
 const root = createRoot(document.getElementById("root")!);
 root.render(
   <React.StrictMode>

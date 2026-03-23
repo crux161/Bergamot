@@ -1,0 +1,30 @@
+export const bergamotThemeTokens = {
+  bgDeepest: "#1E1F22",
+  bgDark: "#232428",
+  bgBase: "#2B2D31",
+  bgElevated: "#313338",
+  bgSurface: "#383A40",
+  bgHover: "#404249",
+  primary: "#6B9362",
+  primaryHover: "#5A8352",
+  primaryActive: "#4A7343",
+  primarySubtle: "#3D5D42",
+  textPrimary: "#E0E1E5",
+  textSecondary: "#B5BAC1",
+  textMuted: "#80848E",
+  textDisabled: "#5C5E66",
+  border: "#3F4147",
+  borderSubtle: "#35373C",
+  divider: "#404249",
+  online: "#23A55A",
+  idle: "#F0B232",
+  dnd: "#F23F43",
+  offline: "#80848E",
+  scrollbarThumb: "#4E5058",
+  scrollbarTrack: "#2B2D31",
+  selection: "#2E4A3E",
+  mention: "#3C4533",
+  mentionBg: "#2F3424"
+} as const;
+
+export type BergamotThemeTokens = typeof bergamotThemeTokens;

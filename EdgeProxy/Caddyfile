@@ -1,0 +1,32 @@
+{
+    auto_https off
+    admin off
+}
+
+:80 {
+    encode zstd gzip
+
+    handle /api/* {
+        reverse_proxy {$BERGAMOT_API_UPSTREAM:host.docker.internal:8000}
+    }
+
+    handle /socket* {
+        reverse_proxy {$BERGAMOT_SOCKET_UPSTREAM:host.docker.internal:4000}
+    }
+
+    handle /uploads/* {
+        reverse_proxy {$BERGAMOT_API_UPSTREAM:host.docker.internal:8000}
+    }
+
+    handle /media* {
+        reverse_proxy {$BERGAMOT_MEDIA_UPSTREAM:host.docker.internal:9100}
+    }
+
+    handle /admin* {
+        reverse_proxy {$BERGAMOT_ADMIN_UPSTREAM:host.docker.internal:9101}
+    }
+
+    handle {
+        reverse_proxy {$BERGAMOT_WEB_UPSTREAM:host.docker.internal:3001}
+    }
+}

@@ -66,11 +66,21 @@ export const ServerSettingsPanel: React.FC<Props> = ({
     api.listMembers(server.id).then(setMembers).catch(() => {});
   }, [server.id]);
 
+  const isAdmin = hasPermission(myPermissions, Permissions.ADMINISTRATOR);
+  const canManageServer = isAdmin || hasPermission(myPermissions, Permissions.MANAGE_SERVER);
+  const canManageRoles = isAdmin || hasPermission(myPermissions, Permissions.MANAGE_ROLES);
+  const canKick = isAdmin || hasPermission(myPermissions, Permissions.KICK_MEMBERS);
+
   const navItems = [
     { key: "overview", label: "Overview", icon: "circles-four" },
-    ...(hasPermission(myPermissions, Permissions.MANAGE_ROLES)
-      ? [{ key: "roles", label: "Roles", icon: "shield" }]
-      : []),
+    ...(canManageRoles ? [{ key: "roles", label: "Roles", icon: "shield" }] : []),
+    { key: "members", label: "Members", icon: "users" },
+    ...(canManageServer ? [{ key: "invites", label: "Invites", icon: "link" }] : []),
+    ...(canKick ? [{ key: "bans", label: "Bans", icon: "prohibit" }] : []),
+    ...(canManageServer ? [{ key: "emoji", label: "Emoji", icon: "smiley" }] : []),
+    ...(canManageServer ? [{ key: "audit-log", label: "Audit Log", icon: "clipboard-text" }] : []),
+    ...(canManageServer ? [{ key: "moderation", label: "Moderation", icon: "shield-warning" }] : []),
+    ...(canManageServer ? [{ key: "webhooks", label: "Webhooks", icon: "webhooks-logo" }] : []),
   ];
 
   return (
@@ -110,6 +120,39 @@ export const ServerSettingsPanel: React.FC<Props> = ({
               roles={roles}
               members={members}
               onChanged={handleRolesChanged}
+            />
+          )}
+          {activeKey === "members" && (
+            <MembersPane serverId={server.id} members={members} roles={roles} />
+          )}
+          {activeKey === "invites" && (
+            <InvitesPane serverId={server.id} />
+          )}
+          {activeKey === "bans" && (
+            <BansPane serverId={server.id} members={members} />
+          )}
+          {activeKey === "emoji" && (
+            <PlaceholderPane
+              title="Server Emoji"
+              description="Upload custom emoji for this server. Members can use these emoji in messages and reactions."
+              icon="smiley"
+            />
+          )}
+          {activeKey === "audit-log" && (
+            <AuditLogPane serverId={server.id} />
+          )}
+          {activeKey === "moderation" && (
+            <PlaceholderPane
+              title="Moderation"
+              description="Configure auto-moderation rules, spam filters, and content policies. Set up keyword filters and automatic actions for rule violations."
+              icon="shield-warning"
+            />
+          )}
+          {activeKey === "webhooks" && (
+            <PlaceholderPane
+              title="Webhooks"
+              description="Create webhook integrations to post automated messages from external services into channels."
+              icon="webhooks-logo"
             />
           )}
         </div>
@@ -459,3 +502,546 @@ const RolesEditor: React.FC<RolesEditorProps> = ({ serverId, roles, members, onC
     </div>
   );
 };
+
+// ── Members Pane ──
+
+const MembersPane: React.FC<{
+  serverId: string;
+  members: MemberWithRoles[];
+  roles: RoleRead[];
+}> = ({ members, roles }) => {
+  const [search, setSearch] = useState("");
+
+  const filtered = search.trim()
+    ? members.filter(
+        (m) =>
+          m.username.toLowerCase().includes(search.toLowerCase()) ||
+          (m.display_name || "").toLowerCase().includes(search.toLowerCase()),
+      )
+    : members;
+
+  const roleMap = Object.fromEntries(roles.map((r) => [r.id, r]));
+
+  return (
+    <div>
+      <Input
+        prefix={<PhIcon name="magnifying-glass" size={14} />}
+        placeholder="Search members"
+        value={search}
+        onChange={setSearch}
+        style={{ marginBottom: 16 }}
+      />
+      <div style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase", marginBottom: 8 }}>
+        {filtered.length} Member{filtered.length !== 1 ? "s" : ""}
+      </div>
+      {filtered.map((m) => (
+        <div key={m.id} className="roles-editor__member-row">
+          <Avatar
+            size="small"
+            style={{ backgroundColor: "var(--semi-color-primary-light-default)", color: "var(--header-primary)" }}
+          >
+            {(m.display_name || m.username)[0]?.toUpperCase()}
+          </Avatar>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 600, fontSize: 14, color: "var(--text-normal)" }}>
+              {m.display_name || m.username}
+            </div>
+            <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
+              {m.role_ids
+                ?.map((rid: string) => roleMap[rid]?.name)
+                .filter(Boolean)
+                .join(", ") || "No roles"}
+            </div>
+          </div>
+        </div>
+      ))}
+      {filtered.length === 0 && (
+        <div style={{ padding: "24px 0", textAlign: "center", color: "var(--text-muted)" }}>
+          No members found
+        </div>
+      )}
+    </div>
+  );
+};
+
+const InvitesPane: React.FC<{ serverId: string }> = ({ serverId }) => {
+  const [invites, setInvites] = useState<api.ServerInviteRead[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [label, setLabel] = useState("");
+  const [notes, setNotes] = useState("");
+  const [maxUses, setMaxUses] = useState("");
+  const [expiresHours, setExpiresHours] = useState("");
+
+  const loadInvites = useCallback(async () => {
+    setLoading(true);
+    try {
+      setInvites(await api.listServerInvites(serverId));
+    } catch (err: any) {
+      Toast.error({ content: err.message || "Failed to load invites", duration: 2 });
+    } finally {
+      setLoading(false);
+    }
+  }, [serverId]);
+
+  useEffect(() => {
+    void loadInvites();
+  }, [loadInvites]);
+
+  const handleCreate = useCallback(async () => {
+    setCreating(true);
+    try {
+      const created = await api.createServerInvite(serverId, {
+        label: label.trim() || null,
+        notes: notes.trim() || null,
+        max_uses: maxUses.trim() ? Number(maxUses) : null,
+        expires_in_hours: expiresHours.trim() ? Number(expiresHours) : null,
+      });
+      setInvites((prev) => [created, ...prev]);
+      setLabel("");
+      setNotes("");
+      setMaxUses("");
+      setExpiresHours("");
+      Toast.success({ content: "Invite created", duration: 1.5 });
+    } catch (err: any) {
+      Toast.error({ content: err.message || "Failed to create invite", duration: 2 });
+    } finally {
+      setCreating(false);
+    }
+  }, [expiresHours, label, maxUses, notes, serverId]);
+
+  const handleCopy = useCallback(async (url: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      Toast.success({ content: "Invite link copied", duration: 1.5 });
+    } catch {
+      Toast.warning({ content: url, duration: 3 });
+    }
+  }, []);
+
+  const handleRevoke = useCallback(async (inviteId: string) => {
+    try {
+      await api.revokeServerInvite(serverId, inviteId);
+      setInvites((prev) => prev.map((invite) => invite.id === inviteId ? { ...invite, revoked_at: new Date().toISOString() } : invite));
+      Toast.success({ content: "Invite revoked", duration: 1.5 });
+    } catch (err: any) {
+      Toast.error({ content: err.message || "Failed to revoke invite", duration: 2 });
+    }
+  }, [serverId]);
+
+  return (
+    <div style={{ display: "grid", gap: 16 }}>
+      <div className="settings-card" style={{ padding: 24, display: "grid", gap: 10 }}>
+        <h3 style={{ color: "var(--header-primary)", marginBottom: 4 }}>Create Invite</h3>
+        <Input value={label} onChange={setLabel} placeholder="Label (optional)" />
+        <Input value={notes} onChange={setNotes} placeholder="Notes (optional)" />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <Input value={maxUses} onChange={setMaxUses} placeholder="Max uses" />
+          <Input value={expiresHours} onChange={setExpiresHours} placeholder="Expires in hours" />
+        </div>
+        <Button
+          theme="solid"
+          loading={creating}
+          style={{ background: "var(--brand-experiment)", borderColor: "var(--brand-experiment)", color: "#fff" }}
+          onClick={() => { void handleCreate(); }}
+        >
+          Create Invite
+        </Button>
+      </div>
+
+      <div className="settings-card" style={{ padding: 24 }}>
+        <h3 style={{ color: "var(--header-primary)", marginBottom: 8 }}>Invite Links</h3>
+        {loading ? (
+          <p style={{ color: "var(--text-muted)" }}>Loading invites...</p>
+        ) : invites.length === 0 ? (
+          <p style={{ color: "var(--text-muted)" }}>No invites yet.</p>
+        ) : (
+          <div style={{ display: "grid", gap: 12 }}>
+            {invites.map((invite) => {
+              const expired = Boolean(invite.expires_at && new Date(invite.expires_at).getTime() <= Date.now());
+              const exhausted = invite.max_uses != null && invite.use_count >= invite.max_uses;
+              const inactive = Boolean(invite.revoked_at || expired || exhausted);
+              return (
+                <div
+                  key={invite.id}
+                  style={{
+                    border: "1px solid var(--background-modifier-accent)",
+                    borderRadius: 12,
+                    padding: 14,
+                    display: "grid",
+                    gap: 6,
+                    opacity: inactive ? 0.68 : 1,
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
+                    <div style={{ color: "var(--header-primary)", fontWeight: 600 }}>{invite.label || invite.server_name}</div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <Button size="small" theme="light" onClick={() => { void handleCopy(invite.invite_url); }}>
+                        Copy
+                      </Button>
+                      {!invite.revoked_at ? (
+                        <Button size="small" theme="borderless" type="danger" onClick={() => { void handleRevoke(invite.id); }}>
+                          Revoke
+                        </Button>
+                      ) : null}
+                    </div>
+                  </div>
+                  <div style={{ color: "var(--text-muted)", fontSize: 12 }}>{invite.invite_url}</div>
+                  {invite.notes ? <div style={{ color: "var(--text-normal)", fontSize: 13 }}>{invite.notes}</div> : null}
+                  <div style={{ color: "var(--interactive-muted)", fontSize: 12 }}>
+                    Uses {invite.use_count}{invite.max_uses != null ? ` / ${invite.max_uses}` : ""} · Created {new Date(invite.created_at).toLocaleString()}
+                  </div>
+                  {invite.expires_at ? (
+                    <div style={{ color: "var(--interactive-muted)", fontSize: 12 }}>
+                      Expires {new Date(invite.expires_at).toLocaleString()}
+                    </div>
+                  ) : null}
+                  {inactive ? (
+                    <div style={{ color: "var(--status-warning)", fontSize: 12 }}>
+                      {invite.revoked_at ? "Invite revoked" : expired ? "Invite expired" : "Invite maxed out"}
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ── Bans Pane ──
+
+const BansPane: React.FC<{ serverId: string; members: MemberWithRoles[] }> = ({ serverId, members }) => {
+  const [bans, setBans] = useState<api.ServerBanRead[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [banUserId, setBanUserId] = useState("");
+  const [banReason, setBanReason] = useState("");
+  const [banning, setBanning] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const loadBans = useCallback(async () => {
+    setLoading(true);
+    try {
+      setBans(await api.listServerBans(serverId));
+    } catch (err: any) {
+      Toast.error({ content: err.message || "Failed to load bans", duration: 2 });
+    } finally {
+      setLoading(false);
+    }
+  }, [serverId]);
+
+  useEffect(() => {
+    void loadBans();
+  }, [loadBans]);
+
+  const handleBan = useCallback(async () => {
+    if (!banUserId) return;
+    setBanning(true);
+    try {
+      const ban = await api.banServerMember(serverId, banUserId, banReason.trim() || undefined);
+      setBans((prev) => [ban, ...prev]);
+      setBanUserId("");
+      setBanReason("");
+      Toast.success({ content: "User banned", duration: 1.5 });
+    } catch (err: any) {
+      Toast.error({ content: err.message || "Failed to ban user", duration: 2 });
+    } finally {
+      setBanning(false);
+    }
+  }, [banUserId, banReason, serverId]);
+
+  const handleUnban = useCallback(async (ban: api.ServerBanRead) => {
+    Modal.confirm({
+      title: `Unban ${ban.display_name || ban.username || "this user"}?`,
+      content: "This user will be able to rejoin the server via invite links.",
+      okText: "Unban",
+      cancelText: "Cancel",
+      onOk: async () => {
+        try {
+          await api.unbanServerMember(serverId, ban.id);
+          setBans((prev) => prev.filter((b) => b.id !== ban.id));
+          Toast.success({ content: "User unbanned", duration: 1.5 });
+        } catch (err: any) {
+          Toast.error({ content: err.message || "Failed to unban", duration: 2 });
+        }
+      },
+    });
+  }, [serverId]);
+
+  // Members not already banned, for the ban dropdown
+  const bannedUserIds = new Set(bans.map((b) => b.user_id));
+  const bannableMembers = members.filter((m) => !bannedUserIds.has(m.user_id));
+
+  const filtered = search.trim()
+    ? bans.filter(
+        (b) =>
+          (b.username || "").toLowerCase().includes(search.toLowerCase()) ||
+          (b.display_name || "").toLowerCase().includes(search.toLowerCase()) ||
+          (b.reason || "").toLowerCase().includes(search.toLowerCase()),
+      )
+    : bans;
+
+  return (
+    <div style={{ display: "grid", gap: 16 }}>
+      <div className="settings-card" style={{ padding: 24, display: "grid", gap: 10 }}>
+        <h3 style={{ color: "var(--header-primary)", marginBottom: 4 }}>Ban a Member</h3>
+        <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 4 }}>
+          Banned users are removed from the server and cannot rejoin until unbanned.
+        </div>
+        <select
+          value={banUserId}
+          onChange={(e) => setBanUserId(e.target.value)}
+          style={{
+            background: "var(--background-secondary)",
+            color: "var(--text-normal)",
+            border: "1px solid var(--background-modifier-accent)",
+            borderRadius: 8,
+            padding: "8px 12px",
+            fontSize: 14,
+          }}
+        >
+          <option value="">Select a member to ban…</option>
+          {bannableMembers.map((m) => (
+            <option key={m.user_id} value={m.user_id}>
+              {m.display_name || m.username}
+            </option>
+          ))}
+        </select>
+        <Input
+          value={banReason}
+          onChange={setBanReason}
+          placeholder="Reason (optional)"
+        />
+        <Button
+          theme="solid"
+          type="danger"
+          loading={banning}
+          disabled={!banUserId}
+          onClick={() => { void handleBan(); }}
+        >
+          Ban Member
+        </Button>
+      </div>
+
+      <div className="settings-card" style={{ padding: 24 }}>
+        <h3 style={{ color: "var(--header-primary)", marginBottom: 8 }}>
+          Banned Users ({bans.length})
+        </h3>
+        {bans.length > 3 && (
+          <Input
+            prefix={<PhIcon name="magnifying-glass" size={14} />}
+            placeholder="Search bans"
+            value={search}
+            onChange={setSearch}
+            style={{ marginBottom: 12 }}
+          />
+        )}
+        {loading ? (
+          <p style={{ color: "var(--text-muted)" }}>Loading bans…</p>
+        ) : filtered.length === 0 ? (
+          <p style={{ color: "var(--text-muted)" }}>
+            {bans.length === 0 ? "No banned users." : "No bans match your search."}
+          </p>
+        ) : (
+          <div style={{ display: "grid", gap: 8 }}>
+            {filtered.map((ban) => (
+              <div
+                key={ban.id}
+                style={{
+                  border: "1px solid var(--background-modifier-accent)",
+                  borderRadius: 12,
+                  padding: 14,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                }}
+              >
+                <Avatar
+                  size="small"
+                  src={ban.avatar_url || undefined}
+                  style={{
+                    backgroundColor: "var(--semi-color-primary-light-default)",
+                    color: "var(--header-primary)",
+                    flexShrink: 0,
+                  }}
+                >
+                  {(ban.display_name || ban.username || "?")[0]?.toUpperCase()}
+                </Avatar>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, fontSize: 14, color: "var(--text-normal)" }}>
+                    {ban.display_name || ban.username || ban.user_id}
+                  </div>
+                  {ban.reason && (
+                    <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 2 }}>
+                      Reason: {ban.reason}
+                    </div>
+                  )}
+                  <div style={{ fontSize: 12, color: "var(--interactive-muted)", marginTop: 2 }}>
+                    Banned {new Date(ban.created_at).toLocaleDateString()}
+                    {ban.banned_by_name ? ` by ${ban.banned_by_name}` : ""}
+                  </div>
+                </div>
+                <Button
+                  size="small"
+                  theme="borderless"
+                  style={{ color: "var(--brand-experiment)" }}
+                  onClick={() => { void handleUnban(ban); }}
+                >
+                  Unban
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ── Audit Log Pane ──
+
+const ACTION_ICONS: Record<number, string> = {
+  1: "prohibit",       // MEMBER_BAN
+  2: "check-circle",   // MEMBER_UNBAN
+  3: "user-minus",     // MEMBER_KICK
+  4: "shield-plus",    // ROLE_CREATE
+  5: "shield",         // ROLE_UPDATE
+  6: "shield-slash",   // ROLE_DELETE
+  7: "hash",           // CHANNEL_CREATE
+  8: "pencil-simple",  // CHANNEL_UPDATE
+  9: "trash",          // CHANNEL_DELETE
+  10: "gear",          // SERVER_UPDATE
+  11: "link",          // INVITE_CREATE
+  12: "link-break",    // INVITE_REVOKE
+  13: "push-pin",      // MESSAGE_PIN
+  14: "trash",         // MESSAGE_DELETE
+};
+
+const AuditLogPane: React.FC<{ serverId: string }> = ({ serverId }) => {
+  const [entries, setEntries] = useState<api.AuditLogEntryRead[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filterType, setFilterType] = useState<string>("");
+
+  const loadLog = useCallback(async () => {
+    setLoading(true);
+    try {
+      const actionType = filterType ? Number(filterType) : undefined;
+      setEntries(await api.listAuditLog(serverId, actionType));
+    } catch (err: any) {
+      Toast.error({ content: err.message || "Failed to load audit log", duration: 2 });
+    } finally {
+      setLoading(false);
+    }
+  }, [serverId, filterType]);
+
+  useEffect(() => {
+    void loadLog();
+  }, [loadLog]);
+
+  return (
+    <div style={{ display: "grid", gap: 16 }}>
+      <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+        <select
+          value={filterType}
+          onChange={(e) => setFilterType(e.target.value)}
+          style={{
+            background: "var(--background-secondary)",
+            color: "var(--text-normal)",
+            border: "1px solid var(--background-modifier-accent)",
+            borderRadius: 8,
+            padding: "8px 12px",
+            fontSize: 13,
+          }}
+        >
+          <option value="">All actions</option>
+          <option value="1">Member Ban</option>
+          <option value="2">Member Unban</option>
+          <option value="3">Member Kick</option>
+          <option value="4">Role Create</option>
+          <option value="5">Role Update</option>
+          <option value="6">Role Delete</option>
+          <option value="7">Channel Create</option>
+          <option value="8">Channel Update</option>
+          <option value="9">Channel Delete</option>
+          <option value="10">Server Update</option>
+          <option value="11">Invite Create</option>
+          <option value="12">Invite Revoke</option>
+          <option value="13">Message Pin</option>
+          <option value="14">Message Delete</option>
+        </select>
+        <Button size="small" theme="light" onClick={() => { void loadLog(); }}>
+          <PhIcon name="arrows-clockwise" size={14} />
+        </Button>
+      </div>
+
+      <div className="settings-card" style={{ padding: 24 }}>
+        {loading ? (
+          <p style={{ color: "var(--text-muted)" }}>Loading audit log…</p>
+        ) : entries.length === 0 ? (
+          <p style={{ color: "var(--text-muted)" }}>No audit log entries found.</p>
+        ) : (
+          <div style={{ display: "grid", gap: 6 }}>
+            {entries.map((entry) => (
+              <div
+                key={entry.id}
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: 12,
+                  padding: "10px 0",
+                  borderBottom: "1px solid var(--background-modifier-accent)",
+                }}
+              >
+                <PhIcon
+                  name={ACTION_ICONS[entry.action_type] || "clipboard-text"}
+                  size={18}
+                  style={{ color: "var(--text-muted)", marginTop: 2, flexShrink: 0 }}
+                />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, color: "var(--text-normal)" }}>
+                    <strong>{entry.user_name || "Unknown"}</strong>
+                    {" "}
+                    <span style={{ color: "var(--text-muted)" }}>{entry.action_label}</span>
+                    {entry.target_id && (
+                      <span style={{ color: "var(--text-muted)", fontSize: 12 }}>
+                        {" "}target: {entry.target_id.slice(0, 8)}…
+                      </span>
+                    )}
+                  </div>
+                  {entry.reason && (
+                    <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 2 }}>
+                      Reason: {entry.reason}
+                    </div>
+                  )}
+                  <div style={{ fontSize: 12, color: "var(--interactive-muted)", marginTop: 2 }}>
+                    {new Date(entry.created_at).toLocaleString()}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ── Placeholder Pane (for tabs not yet fully wired) ──
+
+const PlaceholderPane: React.FC<{
+  title: string;
+  description: string;
+  icon: string;
+}> = ({ title, description, icon }) => (
+  <div style={{ textAlign: "center", padding: "48px 24px" }}>
+    <PhIcon name={icon} size={48} />
+    <h3 style={{ marginTop: 16, color: "var(--text-normal)", fontSize: 18, fontWeight: 600 }}>
+      {title}
+    </h3>
+    <p style={{ color: "var(--text-muted)", fontSize: 14, maxWidth: 420, margin: "8px auto 0" }}>
+      {description}
+    </p>
+  </div>
+);

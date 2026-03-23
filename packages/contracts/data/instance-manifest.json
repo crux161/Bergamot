@@ -1,0 +1,43 @@
+{
+  "manifestVersion": 1,
+  "product": {
+    "name": "Bergamot",
+    "tagline": "Polyglot communities, chat, and calls across the Bergamot ecosystem."
+  },
+  "capabilities": {
+    "routeShell": true,
+    "favorites": true,
+    "quickSwitcher": true,
+    "customThemes": true,
+    "localNotifications": true,
+    "replies": true,
+    "reactions": true,
+    "pins": true,
+    "inbox": true,
+    "mentions": true,
+    "savedItems": true,
+    "messageSearch": true,
+    "readStates": true,
+    "customEmoji": false,
+    "stickers": false,
+    "gifPicker": false,
+    "sessions": true,
+    "accountSwitching": true,
+    "mfa": true,
+    "passkeys": true,
+    "oauth": true,
+    "pushNotifications": false,
+    "voiceDevices": false,
+    "participantModeration": false,
+    "bots": false,
+    "webhooks": false,
+    "discovery": false
+  },
+  "routes": {
+    "login": "/login",
+    "register": "/register",
+    "dmHome": "/channels/@me",
+    "notifications": "/notifications",
+    "favorites": "/favorites"
+  }
+}

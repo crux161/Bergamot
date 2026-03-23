@@ -119,8 +119,7 @@ services:
         # Produced by: Hermes (new messages, edits, deletes)
         # Consumed by: Thoth (persistence to ScyllaDB)
         # Partitions:  12 (keyed by channel_id — higher throughput topic)
-        # Note: This is the "chat.events" topic referenced in Hermes/Thoth.
-        #       Aliased here for clarity; update service configs accordingly.
+        # Hermes publishes here; Thoth consumes from here.
         kafka-topics --create --if-not-exists \
           --bootstrap-server kafka:9092 \
           --topic chat.messages \
@@ -140,6 +139,18 @@ services:
           --partitions 6 \
           --replication-factor 1 \
           --config retention.ms=259200000 \
+          --config cleanup.policy=delete
+
+        # ── bergamot.activity ──
+        # Produced by: Janus (canonical message/read-state/notification events)
+        # Consumed by: Heimdall, Mnemosyne, future derived workers
+        # Partitions:  6 (keyed by stream_id or user_id depending on event)
+        kafka-topics --create --if-not-exists \
+          --bootstrap-server kafka:9092 \
+          --topic bergamot.activity \
+          --partitions 6 \
+          --replication-factor 1 \
+          --config retention.ms=604800000 \
           --config cleanup.policy=delete
 
         # ── voice.signaling ──

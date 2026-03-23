@@ -1,7 +1,18 @@
 SHELL := /bin/bash
 
-.PHONY: infra-up infra-down janus hermes thoth hiemdall apollo proteus \
-       backend-up backend-down \
+DOCKER_COMPOSE ?= docker compose
+DOCKER ?= docker
+ROOT_COMPOSE := $(DOCKER_COMPOSE) -p bergamot-root -f docker-compose.yml
+ANANSI_COMPOSE := $(DOCKER_COMPOSE) -f Anansi/docker-compose.yml
+JANUS_COMPOSE := $(DOCKER_COMPOSE) -f Janus/docker-compose.yml
+HERMES_COMPOSE := $(DOCKER_COMPOSE) -f Hermes/docker-compose.yml
+THOTH_COMPOSE := $(DOCKER_COMPOSE) -f Thoth/docker-compose.yml
+HIEMDALL_COMPOSE := $(DOCKER_COMPOSE) -f Hiemdall/docker-compose.yml
+EDGE_COMPOSE := $(DOCKER_COMPOSE) -p bergamot-edge -f docker-compose.edge.yml
+LEGACY_APOLLO_COMPOSE := $(DOCKER_COMPOSE) -f Apollo/docker-compose.yml
+
+.PHONY: infra-up infra-down janus hermes thoth hiemdall apollo proteus admin media-proxy mnemosyne backfill-activity \
+       backend-up backend-down edge-up edge-down docker-build docker-up docker-down \
        docs docs-janus docs-hermes docs-thoth docs-hiemdall docs-apollo
 
 # ============================================================
@@ -10,11 +21,13 @@ SHELL := /bin/bash
 
 ## Boot shared databases and Kafka broker
 infra-up:
-	docker compose up -d
+	$(ANANSI_COMPOSE) up -d
+	$(ROOT_COMPOSE) up -d janus-postgres thoth-scylla hiemdall-redis atlas atlas-init apollo
 
 ## Spin down shared infrastructure
 infra-down:
-	docker compose down
+	$(ROOT_COMPOSE) down
+	$(ANANSI_COMPOSE) down
 
 # ============================================================
 # Services
@@ -41,7 +54,19 @@ apollo:
 	cd Apollo && node src/index.js
 
 proteus:
-	cd Proteus && npx concurrently "npm run dev" "wait-on http://localhost:3000 && npm start"
+	cd Proteus && npx concurrently -k "npm run dev" "npx wait-on tcp:3000 file:dist/main/main.js file:dist/main/preload.js && npx electron ."
+
+admin:
+	cd Admin && node src/server.mjs
+
+media-proxy:
+	cd MediaProxy && node src/server.mjs
+
+mnemosyne:
+	cd Mnemosyne && node src/index.mjs
+
+backfill-activity:
+	cd Janus && source venv/bin/activate && python scripts/backfill_activity.py
 
 # ============================================================
 # Backend (infrastructure + all services, local)
@@ -89,6 +114,16 @@ backend-down:
 		echo "No $(PIDFILE) found — nothing to stop."; \
 	fi
 	@$(MAKE) infra-down
+
+## Start edge/runtime helpers (Caddy, Meilisearch, ClamAV)
+edge-up:
+	-@$(DOCKER) rm -f bergamot-edge bergamot-admin bergamot-meilisearch bergamot-mnemosyne bergamot-media-proxy >/dev/null 2>&1
+	$(EDGE_COMPOSE) up -d meilisearch admin mnemosyne media-proxy edge-proxy
+
+## Stop edge/runtime helpers
+edge-down:
+	$(EDGE_COMPOSE) down
+	-@$(DOCKER) rm -f bergamot-edge bergamot-admin bergamot-meilisearch bergamot-mnemosyne bergamot-media-proxy >/dev/null 2>&1
 
 # ============================================================
 # Documentation
@@ -150,34 +185,35 @@ docs-apollo-node:
 
 ## Build all Docker images
 docker-build:
-	docker-compose -f Janus/docker-compose.yml build
-	docker-compose -f Hermes/docker-compose.yml build
-	docker-compose -f Thoth/docker-compose.yml build
-	docker-compose -f Hiemdall/docker-compose.yml build
-	docker-compose -f Apollo/docker-compose.yml build
+	$(JANUS_COMPOSE) build
+	$(HERMES_COMPOSE) build
+	$(THOTH_COMPOSE) build
+	$(HIEMDALL_COMPOSE) build
+	$(EDGE_COMPOSE) build admin mnemosyne media-proxy
 
-## Start everything (infrastructure + all services with their own DBs)
-##docker-up:
-##	docker-compose -f Anansi/docker-compose.yml up -d
-##	docker-compose -f Janus/docker-compose.yml up -d
-##	docker-compose -f Hermes/docker-compose.yml up -d
-
+## Start the full dockerized local stack
 docker-up:
-	docker-compose -f Anansi/docker-compose.yml up -d
-	docker compose up -d atlas atlas-init
-	docker-compose -f Janus/docker-compose.yml up -d
-	docker-compose -f Hermes/docker-compose.yml up -d
-	docker-compose -f Thoth/docker-compose.yml up -d
-	docker-compose -f Hiemdall/docker-compose.yml up -d
-	docker-compose -f Apollo/docker-compose.yml up -d
+	$(ANANSI_COMPOSE) up -d
+	-@$(LEGACY_APOLLO_COMPOSE) down >/dev/null 2>&1
+	-@$(DOCKER) rm -f apollo-apollo-1 >/dev/null 2>&1
+	-@$(DOCKER) rm -f atlas atlas-init apollo >/dev/null 2>&1
+	$(ROOT_COMPOSE) up -d atlas atlas-init apollo
+	-@$(DOCKER) rm -f bergamot-edge bergamot-admin bergamot-meilisearch bergamot-mnemosyne bergamot-media-proxy >/dev/null 2>&1
+	$(EDGE_COMPOSE) up -d meilisearch admin mnemosyne media-proxy edge-proxy
+	$(JANUS_COMPOSE) up -d
+	$(HERMES_COMPOSE) up -d
+	$(THOTH_COMPOSE) up -d
+	$(HIEMDALL_COMPOSE) up -d
 
 ## Stop all Docker services (reverse order of docker-up)
 docker-down:
-	docker-compose -f Apollo/docker-compose.yml down
-	docker-compose -f Hiemdall/docker-compose.yml down
-	docker-compose -f Thoth/docker-compose.yml down
-	docker-compose -f Hermes/docker-compose.yml down
-	docker-compose -f Janus/docker-compose.yml down
-	docker compose down atlas atlas-init
-	docker-compose -f Anansi/docker-compose.yml down
-
+	$(HIEMDALL_COMPOSE) down
+	$(THOTH_COMPOSE) down
+	$(HERMES_COMPOSE) down
+	$(JANUS_COMPOSE) down
+	$(EDGE_COMPOSE) down
+	-@$(DOCKER) rm -f bergamot-edge bergamot-admin bergamot-meilisearch bergamot-mnemosyne bergamot-media-proxy >/dev/null 2>&1
+	-@$(DOCKER) rm -f atlas atlas-init apollo >/dev/null 2>&1
+	-@$(LEGACY_APOLLO_COMPOSE) down >/dev/null 2>&1
+	-@$(DOCKER) rm -f apollo-apollo-1 >/dev/null 2>&1
+	$(ANANSI_COMPOSE) down

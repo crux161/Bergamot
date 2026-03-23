@@ -1,0 +1,8 @@
+{
+  "to": "phase1d_1774212816@example.com",
+  "from": "noreply@bergamot.local",
+  "subject": "Verify your Bergamot email address",
+  "text": "Hi Phase One D,\n\nUse this link to verify your email address:\nhttp://localhost:3000/#/verify?token=5XQLjJlHZPcCi_7VGfiJdWFyXt1NN65c3UHLmUtTUWe8Q92I7sQ3ia0iNypvLK6o\n\nIf you did not create this account, you can ignore this message.",
+  "html": null,
+  "created_at": "2026-03-22T20:53:36.549177+00:00"
+}

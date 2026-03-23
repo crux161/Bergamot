@@ -2,11 +2,15 @@ import React, { useState, useCallback, useRef, useEffect, useMemo } from "react"
 import { Input, Toast } from "@douyinfe/semi-ui";
 import { PhIcon } from "./PhIcon";
 import { EmojiPicker } from "./EmojiPicker";
-import { sendMessage, sendTyping } from "../services/socket";
-import { uploadFile, createMessage } from "../services/api";
+import { StickerPicker, type StickerEntry } from "./StickerPicker";
+import { GifPicker, type GifResult } from "./GifPicker";
+import { sendMessage, sendTyping, sendDMMessage, sendDMTyping } from "../services/socket";
+import { uploadFile, createMessage, createDMMessage, createMessageWithReply } from "../services/api";
 import type { MessagePayload, AttachmentPayload } from "../services/socket";
 import { searchEmojis, recordEmojiUsage, resolveShortcode } from "../data/emojiData";
 import type { EmojiEntry } from "../data/emojiData";
+import { useStoreSnapshot } from "../stores/createStore";
+import { messageReplyStore } from "../stores/messageReplyStore";
 
 const MAX_FILE_SIZE_MB = 10;
 
@@ -26,6 +30,15 @@ interface Props {
   senderName?: string;
   /** Open the Gamelet library modal */
   onOpenGamelets?: () => void;
+  /** When true, use DM-specific API/socket calls instead of channel ones */
+  dmMode?: boolean;
+}
+
+/** Resolve a sender name for the reply bar display */
+function resolveReplyName(senderId: string, senderName?: string): string {
+  if (senderName) return senderName;
+  if (senderId.length > 16 && senderId.includes("-")) return senderId.slice(0, 8);
+  return senderId;
 }
 
 export const MessageInput: React.FC<Props> = ({
@@ -37,13 +50,18 @@ export const MessageInput: React.FC<Props> = ({
   senderId = "local",
   senderName,
   onOpenGamelets,
+  dmMode = false,
 }) => {
+  const replyState = useStoreSnapshot(messageReplyStore);
+  const replyingTo = replyState.replyingTo[channelId] ?? null;
   const [value, setValue] = useState("");
   const [sending, setSending] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [pendingPreviews, setPendingPreviews] = useState<string[]>([]);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showStickerPicker, setShowStickerPicker] = useState(false);
+  const [showGifPicker, setShowGifPicker] = useState(false);
   const [autocompleteIndex, setAutocompleteIndex] = useState(0);
   const lastTypingSent = useRef<number>(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -133,11 +151,15 @@ export const MessageInput: React.FC<Props> = ({
         const now = Date.now();
         if (now - lastTypingSent.current >= TYPING_THROTTLE_MS) {
           lastTypingSent.current = now;
-          sendTyping(channelId, senderName);
+          if (dmMode) {
+            sendDMTyping(channelId, senderName);
+          } else {
+            sendTyping(channelId, senderName);
+          }
         }
       }
     },
-    [channelId, wsConnected, senderName]
+    [channelId, wsConnected, senderName, dmMode]
   );
 
   const handleSend = useCallback(async () => {
@@ -181,11 +203,19 @@ export const MessageInput: React.FC<Props> = ({
           timestamp: new Date().toISOString(),
           nonce,
           attachments,
+          reply_to_id: replyingTo?.id,
         };
         onMessageSent(localMsg);
       } else {
         // Persist to Janus DB for history (works even without Hermes)
-        const saved = await createMessage(channelId, content || "", nonce, attachments);
+        let saved;
+        if (dmMode) {
+          saved = await createDMMessage(channelId, content || "", nonce, attachments, replyingTo?.id);
+        } else if (replyingTo) {
+          saved = await createMessageWithReply(channelId, content || "", replyingTo.id, nonce, attachments);
+        } else {
+          saved = await createMessage(channelId, content || "", nonce, attachments);
+        }
 
         // Build the local message payload from the persisted response
         const localMsg: MessagePayload = {
@@ -196,17 +226,28 @@ export const MessageInput: React.FC<Props> = ({
           timestamp: saved.created_at,
           nonce: saved.nonce || undefined,
           attachments: saved.attachments || undefined,
+          reply_to_id: saved.reply_to_id || undefined,
+          reply_to: saved.reply_to || undefined,
         };
         onMessageSent(localMsg);
 
         // Push via WebSocket for real-time delivery to other clients (best-effort)
         if (wsConnected) {
           try {
-            sendMessage(channelId, content || "", nonce, attachments);
+            if (dmMode) {
+              sendDMMessage(channelId, content || "", nonce, attachments, replyingTo?.id);
+            } else {
+              sendMessage(channelId, content || "", nonce, attachments, replyingTo?.id);
+            }
           } catch {
             // WebSocket delivery failed; message is already persisted
           }
         }
+      }
+
+      // Clear reply state after sending
+      if (replyingTo) {
+        messageReplyStore.cancelReply(channelId);
       }
 
       setValue("");
@@ -222,7 +263,7 @@ export const MessageInput: React.FC<Props> = ({
     } finally {
       setSending(false);
     }
-  }, [value, sending, channelId, onMessageSent, mockMode, wsConnected, senderId, pendingFiles, pendingPreviews]);
+  }, [value, sending, channelId, onMessageSent, mockMode, wsConnected, senderId, pendingFiles, pendingPreviews, dmMode, replyingTo]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -311,6 +352,24 @@ export const MessageInput: React.FC<Props> = ({
     [],
   );
 
+  const handleStickerSelect = useCallback(
+    (sticker: StickerEntry) => {
+      // Send sticker as a message with the sticker name
+      setValue(`[sticker:${sticker.name}]`);
+      setShowStickerPicker(false);
+    },
+    [],
+  );
+
+  const handleGifSelect = useCallback(
+    (gif: GifResult) => {
+      // Send GIF URL as a message — in production this embeds as a rich media attachment
+      setValue(gif.url || `[gif:${gif.title}]`);
+      setShowGifPicker(false);
+    },
+    [],
+  );
+
   const canSend = value.trim() || pendingFiles.length > 0;
 
   return (
@@ -319,6 +378,25 @@ export const MessageInput: React.FC<Props> = ({
       onDrop={handleDrop}
       onDragOver={handleDragOver}
     >
+      {/* Reply bar */}
+      {replyingTo && (
+        <div className="chat-area__reply-bar">
+          <PhIcon name="arrow-bend-up-left" size={14} />
+          <span className="chat-area__reply-bar__label">
+            Replying to <strong>{resolveReplyName(replyingTo.sender_id, senderName)}</strong>
+          </span>
+          <span className="chat-area__reply-bar__preview">
+            {replyingTo.content.length > 80 ? replyingTo.content.slice(0, 80) + "…" : replyingTo.content}
+          </span>
+          <button
+            className="chat-area__reply-bar__close"
+            onClick={() => messageReplyStore.cancelReply(channelId)}
+          >
+            <PhIcon name="x" size={14} />
+          </button>
+        </div>
+      )}
+
       {/* Image preview strip */}
       {pendingPreviews.length > 0 && (
         <div className="chat-area__input-previews">
@@ -431,10 +509,38 @@ export const MessageInput: React.FC<Props> = ({
         }
         suffix={
           <div className="message-input__suffix">
+            <div className="emoji-picker-anchor">
+              <div
+                className={`message-input__emoji-btn ${showGifPicker ? "message-input__emoji-btn--active" : ""}`}
+                onClick={() => { setShowGifPicker((prev) => !prev); setShowStickerPicker(false); setShowEmojiPicker(false); }}
+              >
+                <PhIcon name="gif" size={22} />
+              </div>
+              {showGifPicker && (
+                <GifPicker
+                  onSelect={handleGifSelect}
+                  onClose={() => setShowGifPicker(false)}
+                />
+              )}
+            </div>
+            <div className="emoji-picker-anchor">
+              <div
+                className={`message-input__emoji-btn ${showStickerPicker ? "message-input__emoji-btn--active" : ""}`}
+                onClick={() => { setShowStickerPicker((prev) => !prev); setShowEmojiPicker(false); setShowGifPicker(false); }}
+              >
+                <PhIcon name="sticker" size={22} />
+              </div>
+              {showStickerPicker && (
+                <StickerPicker
+                  onSelect={handleStickerSelect}
+                  onClose={() => setShowStickerPicker(false)}
+                />
+              )}
+            </div>
             <div className="emoji-picker-anchor" ref={emojiAnchorRef}>
               <div
                 className={`message-input__emoji-btn ${showEmojiPicker ? "message-input__emoji-btn--active" : ""}`}
-                onClick={() => setShowEmojiPicker((prev) => !prev)}
+                onClick={() => { setShowEmojiPicker((prev) => !prev); setShowStickerPicker(false); setShowGifPicker(false); }}
               >
                 <PhIcon name="smiley" size={22} />
               </div>

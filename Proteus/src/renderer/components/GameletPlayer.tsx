@@ -22,6 +22,7 @@ export const GameletPlayer: React.FC<Props> = ({
   gamepadMapping,
   onLeave,
 }) => {
+  const playerRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
 
@@ -30,8 +31,9 @@ export const GameletPlayer: React.FC<Props> = ({
   // Games with native gamepad support (Emscripten, Ebitengine) don't need
   // this — they read the Gamepad API directly.
   const [bridgeEnabled, setBridgeEnabled] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
-  const { connected, gamepad, bridgeActive } = useGamepad({
+  const { connected, bridgeActive } = useGamepad({
     synthesizeKeys: bridgeEnabled,
     keyMap: gamepadMapping,
     target: stageRef.current,
@@ -41,19 +43,102 @@ export const GameletPlayer: React.FC<Props> = ({
   useEffect(() => {
     if (type !== "iframe") return;
 
-    const handler = (event: MessageEvent) => {
-      try {
-        const iframeOrigin = new URL(gameUrl).origin;
-        if (event.origin !== iframeOrigin) return;
-      } catch {
-        return;
+    const sendToIframe = (messageType: string, payload: unknown) => {
+      if (iframeRef.current?.contentWindow) {
+        iframeRef.current.contentWindow.postMessage({ type: messageType, payload }, "*");
       }
-      console.log("[Proteus] Gamelet postMessage:", event.data);
+    };
+
+    const handler = async (event: MessageEvent) => {
+      try {
+        // [PATCH]: Dynamically trust the current window's origin (Vite/Bun dev servers)
+        const trustedOrigins = new Set(["http://localhost:8080", "null", window.location.origin]);
+        let iframeOrigin: string | null = null;
+
+        try {
+          // [PATCH]: Pass window.location.href as the base to resolve relative gameUrls
+          iframeOrigin = new URL(gameUrl, window.location.href).origin;
+        } catch {
+          iframeOrigin = null;
+        }
+
+        if (!trustedOrigins.has(event.origin) && (!iframeOrigin || event.origin !== iframeOrigin)) {
+          return; // Ignore unauthorized messages
+        }
+
+        const data = typeof event.data === "object" && event.data !== null
+          ? event.data as { type?: string; action?: string; payload?: unknown }
+          : null;
+
+        if (!data) return;
+
+        const { type: messageType, action, payload } = data;
+
+        // Ignore generic gamelet messages, process only Turtle API requests
+        if (messageType !== "TURTLE_CMD") {
+          return;
+        }
+
+        const scraper = window.api?.scraper;
+        if (!scraper) {
+          sendToIframe("TURTLE_ERROR", { message: "Scraper bridge is not available in preload." });
+          return;
+        }
+
+        try {
+          if (action === "search") {
+            if (typeof payload !== "string") {
+              sendToIframe("TURTLE_ERROR", { message: "Search payload must be a string." });
+              return;
+            }
+            const result = await scraper.search(payload);
+            sendToIframe("TURTLE_RESULT_SEARCH", result);
+            return;
+          }
+
+          if (action === "episodes") {
+            if (typeof payload !== "string") {
+              sendToIframe("TURTLE_ERROR", { message: "Episode payload must be a string." });
+              return;
+            }
+            const result = await scraper.getEpisodes(payload);
+            sendToIframe("TURTLE_RESULT_EPISODES", result);
+            return;
+          }
+
+          if (action === "stream") {
+            if (typeof payload !== "string") {
+              sendToIframe("TURTLE_ERROR", { message: "Stream payload must be a string." });
+              return;
+            }
+            const result = await scraper.extractStreamUrl(payload);
+            sendToIframe("TURTLE_RESULT_STREAM", result);
+            return;
+          }
+
+          sendToIframe("TURTLE_ERROR", { message: `Unsupported Turtle action: ${String(action || "unknown")}` });
+        } catch (error) {
+          console.error("Turtle Backend Error:", error);
+          const message = error instanceof Error ? error.message : "Unknown Turtle backend error";
+          sendToIframe("TURTLE_ERROR", { message });
+        }
+      } catch (error) {
+        console.error("[Proteus] Failed to process gamelet message:", error);
+      }
     };
 
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
   }, [gameUrl, type]);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(document.fullscreenElement === playerRef.current);
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
 
   // Use onMouseDown instead of onClick so the button fires even if
   // the iframe/canvas previously captured focus (onClick can be swallowed
@@ -73,80 +158,115 @@ export const GameletPlayer: React.FC<Props> = ({
     setBridgeEnabled((prev) => !prev);
   }, []);
 
+  const handleToggleFullscreen = useCallback(async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+
+    try {
+      if (document.fullscreenElement === playerRef.current) {
+        await document.exitFullscreen();
+        return;
+      }
+
+      await playerRef.current?.requestFullscreen();
+    } catch (error) {
+      console.warn("[Proteus] Failed to toggle activity fullscreen:", error);
+    }
+  }, []);
+
+  const handleOpenExternal = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+
+    if (type !== "iframe") {
+      return;
+    }
+
+    try {
+      const resolvedUrl = new URL(gameUrl, window.location.href).toString();
+      window.open(resolvedUrl, "_blank", "noopener,noreferrer");
+    } catch (error) {
+      console.warn("[Proteus] Failed to open activity externally:", error);
+    }
+  }, [gameUrl, type]);
+
   return (
-    <div className="gamelet-player">
-      {/* Game content — fills the available space above the control bar */}
-      <div className="gamelet-player__stage" ref={stageRef}>
-        {type === "wasm" ? (
-          <div className="gamelet-player__canvas-host">
-            <GameletteView wasmUrl={gameUrl} />
-          </div>
-        ) : (
-          <iframe
-            ref={iframeRef}
-            src={gameUrl}
-            className="gamelet-player__iframe"
-            sandbox="allow-scripts allow-same-origin"
-            allow="autoplay; gamepad"
-            title="Gamelet Activity"
-          />
-        )}
+    <div className={`gamelet-player${isFullscreen ? " gamelet-player--fullscreen" : ""}`} ref={playerRef}>
+      <div className="gamelet-player__viewport">
+        <div className="gamelet-player__stage" ref={stageRef}>
+          {type === "wasm" ? (
+            <div className="gamelet-player__canvas-host">
+              <GameletteView wasmUrl={gameUrl} />
+            </div>
+          ) : (
+            <iframe
+              ref={iframeRef}
+              src={gameUrl}
+              className="gamelet-player__iframe"
+              sandbox="allow-scripts allow-same-origin allow-forms"
+              allow="autoplay; gamepad; encrypted-media; fullscreen; picture-in-picture"
+              title={`${gameName} Activity`}
+            />
+          )}
+        </div>
       </div>
 
-      {/* Discord-style centered control bar */}
-      <div className="gamelet-player__controls">
-        <div className="gamelet-player__controls-label">
-          <PhIcon name="game-controller" weight="fill" size={14} />
-          <span>{gameName}</span>
-        </div>
+      <div className="gamelet-player__toolbar">
+        <div className="gamelet-player__toolbar-spacer" />
 
-        <div className="gamelet-player__controls-buttons">
-          {/* Gamepad indicator / bridge toggle */}
+        <div className="gamelet-player__toolbar-center">
           <button
-            className={
-              "gamelet-player__ctrl-btn" +
-              (connected ? " gamelet-player__ctrl-btn--gamepad-on" : "") +
-              (bridgeActive ? " gamelet-player__ctrl-btn--bridge-active" : "")
-            }
+            className={`gamelet-player__toolbar-btn gamelet-player__toolbar-btn--filled${bridgeActive ? " gamelet-player__toolbar-btn--active" : ""}`}
             onMouseDown={toggleBridge}
             title={
               !connected
                 ? "No controller detected"
                 : bridgeActive
-                  ? "Gamepad bridge active — click to disable"
-                  : "Enable gamepad → keyboard bridge"
+                  ? "Disable gamepad bridge"
+                  : "Enable gamepad bridge"
             }
+            aria-label={bridgeActive ? "Disable gamepad bridge" : "Enable gamepad bridge"}
+            aria-pressed={bridgeActive}
             disabled={!connected}
+            type="button"
           >
-            <PhIcon name="gamepad" size={20} />
+            <PhIcon name="caret-down" size={16} />
           </button>
 
-          {/* Leave activity */}
           <button
-            className="gamelet-player__ctrl-btn gamelet-player__ctrl-btn--leave"
+            className="gamelet-player__toolbar-btn gamelet-player__toolbar-btn--filled"
+            onMouseDown={handleToggleFullscreen}
+            title={isFullscreen ? "Exit fullscreen activity" : "Fullscreen activity"}
+            aria-label={isFullscreen ? "Exit fullscreen activity" : "Fullscreen activity"}
+            type="button"
+          >
+            <PhIcon name="arrows-out" size={16} />
+          </button>
+
+          <button
+            className="gamelet-player__toolbar-btn gamelet-player__toolbar-btn--danger"
             onMouseDown={handleLeave}
             title="Leave Activity"
+            aria-label="Leave Activity"
+            type="button"
           >
-            <PhIcon name="sign-out" size={20} />
+            <PhIcon name="sign-out" size={16} />
           </button>
         </div>
 
-        {/* Gamepad status — right side */}
-        {connected && gamepad && (
-          <div className="gamelet-player__controls-status">
-            <span className="gamelet-player__gamepad-dot" />
-            <span>{simplifyPadName(gamepad.id)}</span>
-          </div>
-        )}
+        <div className="gamelet-player__toolbar-side">
+          <button
+            className="gamelet-player__toolbar-btn gamelet-player__toolbar-btn--ghost"
+            onMouseDown={handleOpenExternal}
+            title={type === "iframe" ? `Open ${gameName} in a new window` : "External view is only available for iframe activities"}
+            aria-label={type === "iframe" ? `Open ${gameName} in a new window` : "External view unavailable"}
+            disabled={type !== "iframe"}
+            type="button"
+          >
+            <PhIcon name="arrow-square-out" size={18} />
+          </button>
+        </div>
       </div>
     </div>
   );
 };
-
-/** Shorten verbose gamepad IDs like "DualSense Wireless Controller (STANDARD GAMEPAD …)" */
-function simplifyPadName(id: string): string {
-  // Strip parenthesized vendor/product info
-  const clean = id.replace(/\s*\(.*\)\s*$/, "").trim();
-  // Truncate if still long
-  return clean.length > 28 ? clean.slice(0, 28) + "…" : clean;
-}

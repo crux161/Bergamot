@@ -25,7 +25,7 @@ services:
       REDIS_URL: "redis://redis:6379"
       KAFKA_BROKERS: "kafka:9092"
       KAFKA_GROUP_ID: "heimdall-readers"
-      KAFKA_TOPIC: "user.activity"
+      KAFKA_TOPIC: "bergamot.activity"
       RUST_LOG: "info"
     depends_on:
       redis:

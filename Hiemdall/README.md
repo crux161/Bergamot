@@ -1,50 +1,30 @@
-# Heimdall — Read State & Notification Worker
+# Heimdall
 
-> Named for the Norse god who stands watch on the Bifrost bridge.
-> Heimdall sees all — tracking what each user has and hasn't read.
+Derived unread-state worker for Bergamot.
 
-**Language**: Rust | **State Store**: Redis 7 | **Ingestion**: Kafka consumer
+- Consumes canonical Janus-originated events from Kafka topic `bergamot.activity`
+- Stores per-user, per-stream read cursors in Redis
+- Maintains exact unread counters for channel and DM streams
+- Observes notification and saved-item events for future inbox/push fanout work
 
-## Architecture
+## Redis keys
 
-| Layer | File | Description |
-|-------|------|-------------|
-| Consumer | `src/consumer/kafka.rs` | `rdkafka` StreamConsumer on `user.activity` |
-| Read Tracker | `src/redis_state/read_tracker.rs` | Atomic read-cursor advancement via Lua scripts |
-| Unread Calculator | `src/redis_state/unread.rs` | `has_unreads()` and `approximate_unread_count()` using Snowflake ID delta heuristic |
-| Events | `src/models/events.rs` | Tagged enum: `MessageRead`, `UserMentioned` |
+- `read_state:{user_id}:{stream_id}:message_id`
+- `read_state:{user_id}:{stream_id}:ts`
+- `stream_latest:{stream_id}:message_id`
+- `stream_latest:{stream_id}:ts`
+- `unread_count:{user_id}:{stream_id}`
 
-## Redis Key Schema
+## Current behavior
 
-| Key Pattern | Type | Description |
-|-------------|------|-------------|
-| `read_state:{user_id}:{channel_id}` | String | Snowflake ID of the last message read |
-| `channel_latest:{channel_id}` | String | Snowflake ID of the newest message in channel |
+- `message_created` updates the latest message pointer and increments unread counters for recipients
+- `read_state_updated` stores the new cursor and resets unread count for that stream
+- `message_deleted`, `notification_created`, `notification_read`, and `saved_item_updated` are consumed so the contract stays aligned, even where downstream handling is still lightweight
 
-## Unread Heuristic
+## Environment
 
-Rather than counting messages between cursors (expensive), Heimdall uses a Snowflake ID delta heuristic:
-- `has_unreads`: `channel_latest > read_state` (O(1))
-- `approximate_count`: estimates from the sequence bits in the Snowflake delta
-
-## Running
-
-```bash
-# Standalone
-cd Hiemdall
-docker compose up --build
-
-# Against shared infrastructure
-cd Hiemdall
-cargo run
-```
-
-## Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `REDIS_URL` | `redis://redis:6379` | Redis connection URL |
-| `KAFKA_BROKERS` | `kafka:9092` | Kafka bootstrap servers |
-| `KAFKA_GROUP_ID` | `heimdall-readers` | Consumer group ID |
-| `KAFKA_TOPIC` | `user.activity` | Topic to consume |
-| `RUST_LOG` | `info` | Log level filter |
+- `REDIS_URL` defaults to `redis://redis:6379`
+- `KAFKA_BROKERS` defaults to `kafka:9092`
+- `KAFKA_GROUP_ID` defaults to `heimdall-readers`
+- `KAFKA_TOPIC` defaults to `bergamot.activity`
+- `RUST_LOG` defaults to `info`
